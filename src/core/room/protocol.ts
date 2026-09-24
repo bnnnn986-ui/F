@@ -7,7 +7,10 @@
  * stay connected while the host picks games from the party lobby one after
  * another (Jackbox/GameBuddies style), instead of a fresh room per game.
  */
+import type { Team } from './teams';
+
 export const PROTOCOL_VERSION = 1;
+export type { Team } from './teams';
 
 export type RoomPhase = 'lobby' | 'in-game';
 
@@ -23,12 +26,22 @@ export interface RoomPlayer {
   isBot: boolean;
   score: number;
   joinedAt: number;
+  /** Guild/team id, or null when team mode is off or unassigned. See core/room/teams.ts. */
+  teamId: string | null;
 }
 
 /** Cumulative points a player earned across games this party. */
 export interface PartyScoreEntry {
   playerId: string;
   name: string;
+  total: number;
+}
+
+/** Cumulative points a TEAM earned across team-mode games this party. */
+export interface PartyTeamScoreEntry {
+  teamId: string;
+  name: string;
+  color: string;
   total: number;
 }
 
@@ -65,7 +78,14 @@ export interface PingMessage {
   t: 'ping';
 }
 
-export type ClientToHostMessage = HelloMessage | GameIntentMessage | PingMessage;
+/** Player self-selects a team from the party lobby (only takes effect while team mode is on). */
+export interface ChooseTeamMessage {
+  v: 1;
+  t: 'chooseTeam';
+  teamId: string;
+}
+
+export type ClientToHostMessage = HelloMessage | GameIntentMessage | PingMessage | ChooseTeamMessage;
 
 // ---- Host -> Client ----
 
@@ -85,6 +105,9 @@ export interface LobbyMessage {
   phase: RoomPhase;
   activeGameId: string | null;
   partyScores: PartyScoreEntry[];
+  teamMode: boolean;
+  teams: Team[];
+  partyTeamScores: PartyTeamScoreEntry[];
 }
 
 export interface ErrorMessage {
@@ -131,7 +154,7 @@ function isVersionedMessage(data: unknown): data is { v: 1; t: string } {
 }
 
 export function isClientToHostMessage(data: unknown): data is ClientToHostMessage {
-  return isVersionedMessage(data) && ['hello', 'gameIntent', 'ping'].includes(data.t);
+  return isVersionedMessage(data) && ['hello', 'gameIntent', 'ping', 'chooseTeam'].includes(data.t);
 }
 
 export function isHostToClientMessage(data: unknown): data is HostToClientMessage {

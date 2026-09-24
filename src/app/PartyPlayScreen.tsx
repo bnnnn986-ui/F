@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { navigate } from './router';
 import { usePartyClientState } from './usePartyClientState';
-import { sendPartyIntent, joinParty, loadSavedSession } from './partyClientStore';
+import { sendPartyIntent, joinParty, loadSavedSession, choosePartyTeam } from './partyClientStore';
 import { loadGameModule } from '../games/registry';
 import type { GameModule } from '../games/types';
 import { PixelPanel } from '../core/ui/PixelPanel';
@@ -106,12 +106,18 @@ export function PartyPlayScreen() {
   const self = state.players.find((p) => p.playerId === state.selfPlayerId);
   return (
     <>
-      {state.partyScores.length > 0 && (
+      {(state.partyScores.length > 0 || state.partyTeamScores.length > 0) && (
         <div className="screen-center" style={{ minHeight: 0, paddingBottom: 0 }}>
-          <PartyScoreboard scores={state.partyScores} />
+          <PartyScoreboard scores={state.partyScores} teamScores={state.partyTeamScores} />
         </div>
       )}
-      <PlayerLobby self={self} players={state.players} />
+      <PlayerLobby
+        self={self}
+        players={state.players}
+        teamMode={state.teamMode}
+        teams={state.teams}
+        onChooseTeam={choosePartyTeam}
+      />
     </>
   );
 }

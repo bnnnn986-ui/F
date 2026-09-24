@@ -1,9 +1,13 @@
 import type { GameHost, GameHostContext, GameModule } from '../types';
+import type { Team } from '../../core/room/protocol';
 import { quizRaceManifest } from './manifest';
 import { QuizRaceHostView, QuizRacePlayerView } from './views/index';
 import { createInitialState, dungeonDashReducer, selectQuestions } from './logic/reducer';
-import { buildHostView, buildPlayerView, type HostViewPayload, type PlayerViewPayload } from './logic/views';
+import { buildHostView, buildPlayerView, type HostViewPayload, type PlayerViewPayload, type RunnerView } from './logic/views';
 import { decideBotAnswer } from './logic/bots';
+import { computeTeamScores, type TeamScore } from './logic/teamScoring';
+import { buildAdventureReport, type AdventureReport } from './logic/report';
+import { saveReport } from './content/reportHistory';
 import { BUILT_IN_PACKS, getBuiltInPack } from './content';
 import { loadCustomPacks } from './content/customPacks';
 import { DEFAULT_SETUP, type QuizSetup } from './setupConfig';
@@ -22,9 +26,17 @@ export interface QuizHostViewPayload extends HostViewPayload {
   setup: QuizSetup;
   availablePacks: Array<{ id: string; nameTh: string; questionCount: number }>;
   playerCount: number;
+  teamMode: boolean;
+  teams: Team[];
+  teamScores: TeamScore[] | null;
+  runners: EnrichedRunnerView[];
+  /** Only populated once phase is 'podium'. */
+  report: AdventureReport | null;
 }
 
 export type QuizPlayerViewPayload = PlayerViewPayload;
+
+export type EnrichedRunnerView = RunnerView & { teamId: string | null };
 
 interface PersistedState {
   state: DungeonDashState;
@@ -46,17 +58,19 @@ function buildQuestions(setup: QuizSetup) {
     ...setup.config,
     secondsPerQuestion: setup.extraTime ? Math.round(setup.config.secondsPerQuestion * 1.5) : setup.config.secondsPerQuestion,
   };
-  return { questions: selectQuestions(pack, config), config };
+  return { questions: selectQuestions(pack, config), config, packNameTh: pack.nameTh };
 }
 
 class DungeonDashGameHost implements GameHost<unknown> {
   private ctx: GameHostContext;
   private state: DungeonDashState;
   private setup: QuizSetup;
+  private packNameTh: string;
   private lastScheduledQuestionIndex = -1;
   private botSchedule = new Map<string, { answerAt: number; choiceIndex: number }>();
   private rng: () => number;
   private ended = false;
+  private reportSaved = false;
 
   constructor(ctx: GameHostContext, restoreState?: unknown, rng: () => number = Math.random) {
     this.ctx = ctx;
@@ -65,13 +79,24 @@ class DungeonDashGameHost implements GameHost<unknown> {
       const persisted = restoreState as PersistedState;
       this.state = persisted.state;
       this.setup = persisted.setup;
+      this.packNameTh = getBuiltInPack(this.setup.config.packId)?.nameTh ?? allPacks().find((p) => p.id === this.setup.config.packId)?.nameTh ?? this.setup.config.packId;
+      this.reportSaved = persisted.state.phase === 'podium';
     } else {
       this.setup = DEFAULT_SETUP;
-      const { questions, config } = buildQuestions(this.setup);
-      const players = ctx.getPlayers().map((p) => ({ playerId: p.playerId, name: p.name, avatarId: p.avatarId, tint: p.tint, isBot: p.isBot }));
+      const { questions, config, packNameTh } = buildQuestions(this.setup);
+      this.packNameTh = packNameTh;
+      const players = this.playersForReducer();
       this.state = createInitialState(config, questions, players);
     }
   }
+
+  private playersForReducer() {
+    return this.ctx.getPlayers().map((p) => ({ playerId: p.playerId, name: p.name, avatarId: p.avatarId, tint: p.tint, isBot: p.isBot }));
+  }
+
+  private playerTeamOf = (playerId: string): string | null => {
+    return this.ctx.getPlayers().find((p) => p.playerId === playerId)?.teamId ?? null;
+  };
 
   onPlayerJoin(playerId: string): void {
     const player = this.ctx.getPlayers().find((p) => p.playerId === playerId);
@@ -104,9 +129,9 @@ class DungeonDashGameHost implements GameHost<unknown> {
       case 'configure': {
         if (this.state.phase !== 'setup') return;
         this.setup = { ...this.setup, ...a.setup, config: { ...this.setup.config, ...a.setup.config } };
-        const { questions, config } = buildQuestions(this.setup);
-        const players = this.ctx.getPlayers().map((p) => ({ playerId: p.playerId, name: p.name, avatarId: p.avatarId, tint: p.tint, isBot: p.isBot }));
-        this.state = createInitialState(config, questions, players);
+        const { questions, config, packNameTh } = buildQuestions(this.setup);
+        this.packNameTh = packNameTh;
+        this.state = createInitialState(config, questions, this.playersForReducer());
         break;
       }
       case 'start':
@@ -117,12 +142,13 @@ class DungeonDashGameHost implements GameHost<unknown> {
         this.state = dungeonDashReducer(this.state, { type: 'next', now: Date.now() });
         break;
       case 'restart': {
-        const { questions, config } = buildQuestions(this.setup);
-        const players = this.ctx.getPlayers().map((p) => ({ playerId: p.playerId, name: p.name, avatarId: p.avatarId, tint: p.tint, isBot: p.isBot }));
-        this.state = createInitialState(config, questions, players);
+        const { questions, config, packNameTh } = buildQuestions(this.setup);
+        this.packNameTh = packNameTh;
+        this.state = createInitialState(config, questions, this.playersForReducer());
         this.lastScheduledQuestionIndex = -1;
         this.botSchedule.clear();
         this.ended = false;
+        this.reportSaved = false;
         break;
       }
       case 'exitToLobby':
@@ -135,7 +161,19 @@ class DungeonDashGameHost implements GameHost<unknown> {
     const before = this.state.phase;
     this.state = dungeonDashReducer(this.state, { type: 'tick', now });
     if (this.state.phase === 'question') this.runBots(now);
-    if (before !== this.state.phase) this.ctx.requestBroadcast();
+    if (before !== this.state.phase) {
+      if (this.state.phase === 'podium') this.saveReportOnce();
+      this.ctx.requestBroadcast();
+    }
+  }
+
+  private saveReportOnce(): void {
+    if (this.reportSaved) return;
+    this.reportSaved = true;
+    const teamMode = this.ctx.getTeamMode();
+    const teams = teamMode ? this.ctx.getTeams() : null;
+    const report = buildAdventureReport(this.state, this.packNameTh, teams, this.playerTeamOf);
+    saveReport(report);
   }
 
   private runBots(now: number): void {
@@ -162,16 +200,31 @@ class DungeonDashGameHost implements GameHost<unknown> {
   private finishAndExit(): void {
     if (this.ended) return;
     this.ended = true;
+    this.saveReportOnce();
     const results = Object.values(this.state.players).map((p) => ({ playerId: p.playerId, points: p.score }));
-    this.ctx.endGame(results);
+    const teamMode = this.ctx.getTeamMode();
+    const teamResults = teamMode
+      ? computeTeamScores(this.state, this.ctx.getTeams(), this.playerTeamOf).map((t) => ({ teamId: t.team.id, points: t.avgScore }))
+      : undefined;
+    this.ctx.endGame(results, teamResults);
   }
 
   getHostView(): QuizHostViewPayload {
+    const teamMode = this.ctx.getTeamMode();
+    const teams = this.ctx.getTeams();
+    const teamScores = teamMode && teams.length > 0 ? computeTeamScores(this.state, teams, this.playerTeamOf) : null;
+    const base = buildHostView(this.state);
+    const runners: EnrichedRunnerView[] = base.runners.map((r) => ({ ...r, teamId: this.playerTeamOf(r.playerId) }));
     return {
-      ...buildHostView(this.state),
+      ...base,
+      runners,
       setup: this.setup,
       availablePacks: allPacks().map((p) => ({ id: p.id, nameTh: p.nameTh, questionCount: p.questions.length })),
       playerCount: this.ctx.getPlayers().filter((p) => !p.isBot).length,
+      teamMode,
+      teams,
+      teamScores,
+      report: this.state.phase === 'podium' ? buildAdventureReport(this.state, this.packNameTh, teamMode ? teams : null, this.playerTeamOf) : null,
     };
   }
 

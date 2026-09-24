@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import type { ComponentType } from 'preact';
 import { navigate } from './router';
 import { getManifest, loadGameModule } from '../games/registry';
 import type { GameModule } from '../games/types';
 import { RoomHost } from '../core/room/host';
 import { PeerHostTransport } from '../core/net/peerTransport';
-import type { PartyScoreEntry, RoomPhase, RoomPlayer } from '../core/room/protocol';
+import type { PartyScoreEntry, PartyTeamScoreEntry, RoomPhase, RoomPlayer, Team } from '../core/room/protocol';
 import { HostLobby } from '../lobby/HostLobby';
 import { GamePicker } from '../lobby/GamePicker';
 import { PartyScoreboard } from '../lobby/PartyScoreboard';
+import { TeamPanel } from '../lobby/TeamPanel';
 import { PixelPanel } from '../core/ui/PixelPanel';
 import { PixelButton } from '../core/ui/PixelButton';
 import { D20Spinner } from '../core/ui/D20Spinner';
@@ -31,10 +33,15 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
   const [locked, setLocked] = useState(false);
   const [phase, setPhase] = useState<RoomPhase>('lobby');
   const [partyScores, setPartyScores] = useState<PartyScoreEntry[]>([]);
+  const [teamMode, setTeamModeState] = useState(false);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [partyTeamScores, setPartyTeamScores] = useState<PartyTeamScoreEntry[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(preselectGameId ?? null);
   const [activeModule, setActiveModule] = useState<GameModule | null>(null);
   const [gameView, setGameView] = useState<unknown>(null);
   const [snapshot, setSnapshot] = useState<HostSnapshot | null>(null);
+  const [ReportHistoryComp, setReportHistoryComp] = useState<ComponentType<{ onClose: () => void }> | null>(null);
+  const [showReportHistory, setShowReportHistory] = useState(false);
 
   const hostRef = useRef<RoomHost | null>(null);
   const prevCountRef = useRef(0);
@@ -46,6 +53,9 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
       setPlayers(list);
       setLocked(isLocked);
       setPartyScores(host.getPartyScores());
+      setTeamModeState(host.getTeamMode());
+      setTeams(host.getTeams());
+      setPartyTeamScores(host.getPartyTeamScores());
     });
     host.on('phaseChange', (newPhase, gameId) => {
       setPhase(newPhase);
@@ -89,6 +99,9 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
       setPhase(host.getPhase());
       setPlayers(host.getPlayers());
       setPartyScores(host.getPartyScores());
+      setTeamModeState(host.getTeamMode());
+      setTeams(host.getTeams());
+      setPartyTeamScores(host.getPartyTeamScores());
       if (host.getActiveGameId()) {
         const module = await loadGameModule(host.getActiveGameId()!);
         setActiveModule(module);
@@ -209,9 +222,32 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
         >
           🤖 เพิ่มนักผจญภัย NPC ({botCount}/10)
         </PixelButton>
+        <PixelButton
+          variant="secondary"
+          onClick={() => {
+            setShowReportHistory(true);
+            if (!ReportHistoryComp) {
+              import('../games/quiz-race/views/ReportHistoryModal').then((m) => setReportHistoryComp(() => m.ReportHistoryModal));
+            }
+          }}
+        >
+          📜 รายงานย้อนหลัง
+        </PixelButton>
       </div>
 
-      <PartyScoreboard scores={partyScores} />
+      {showReportHistory && ReportHistoryComp && <ReportHistoryComp onClose={() => setShowReportHistory(false)} />}
+
+      <PartyScoreboard scores={partyScores} teamScores={partyTeamScores} />
+
+      <TeamPanel
+        teamMode={teamMode}
+        teams={teams}
+        players={players}
+        onSetTeamMode={(on) => hostRef.current?.setTeamMode(on)}
+        onSetTeamCount={(n) => hostRef.current?.setTeamCount(n)}
+        onAutoBalance={() => hostRef.current?.autoBalanceTeams()}
+        onCyclePlayerTeam={(playerId, teamId) => hostRef.current?.movePlayerToTeam(playerId, teamId)}
+      />
 
       <GamePicker selectedGameId={selectedGameId} onSelect={setSelectedGameId} />
 

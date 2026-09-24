@@ -1,17 +1,55 @@
 import { PixelPanel } from '../core/ui/PixelPanel';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
-import type { RoomPlayer } from '../core/room/protocol';
+import type { RoomPlayer, Team } from '../core/room/protocol';
+import { getTeam } from '../core/room/teams';
 
-export function PlayerLobby({ self, players }: { self: RoomPlayer | undefined; players: RoomPlayer[] }) {
+export function PlayerLobby({
+  self,
+  players,
+  teamMode = false,
+  teams = [],
+  onChooseTeam,
+}: {
+  self: RoomPlayer | undefined;
+  players: RoomPlayer[];
+  teamMode?: boolean;
+  teams?: Team[];
+  onChooseTeam?: (teamId: string) => void;
+}) {
   const others = players.filter((p) => p.playerId !== self?.playerId);
+  const myTeam = teamMode ? getTeam(teams, self?.teamId) : undefined;
 
   return (
     <div className="player-lobby">
       <PixelPanel className="player-lobby__self">
         <AvatarSprite avatarId={self?.avatarId ?? 'fighter'} tint={self?.tint ?? 0} size={96} animation="idle" />
         <p className="player-lobby__name">{self?.name ?? '...'}</p>
+        {myTeam && (
+          <p className="player-lobby__team" style={{ color: myTeam.color }}>
+            {myTeam.emblem} {myTeam.name}
+          </p>
+        )}
         <p className="player-lobby__waiting">รอผู้คุมเกมเริ่มภารกิจ…</p>
       </PixelPanel>
+
+      {teamMode && teams.length > 0 && onChooseTeam && (
+        <PixelPanel className="player-lobby__team-picker">
+          <p className="quiz-setup__label">เลือกกิลด์ของคุณ</p>
+          <div className="quiz-setup__chip-row">
+            {teams.map((team) => (
+              <button
+                key={team.id}
+                type="button"
+                className={`quiz-setup__chip ${self?.teamId === team.id ? 'is-active' : ''}`}
+                style={self?.teamId === team.id ? { background: team.color, color: '#fff' } : undefined}
+                onClick={() => onChooseTeam(team.id)}
+              >
+                {team.emblem} {team.name}
+              </button>
+            ))}
+          </div>
+        </PixelPanel>
+      )}
 
       <PixelPanel dark className="player-lobby__others">
         <h2>นักผจญภัยคนอื่น ({others.length})</h2>
@@ -19,15 +57,23 @@ export function PlayerLobby({ self, players }: { self: RoomPlayer | undefined; p
           <p className="player-lobby__empty">ยังไม่มีใครเข้าร่วมเพิ่ม</p>
         ) : (
           <ul className="player-lobby__list">
-            {others.map((p) => (
-              <li key={p.playerId} className={!p.connected ? 'is-disconnected' : ''}>
-                <AvatarSprite avatarId={p.avatarId} tint={p.tint} size={40} animation="idle" />
-                <span>
-                  {p.name}
-                  {p.isBot && <span className="npc-badge">NPC</span>}
-                </span>
-              </li>
-            ))}
+            {others.map((p) => {
+              const team = teamMode ? getTeam(teams, p.teamId) : undefined;
+              return (
+                <li key={p.playerId} className={!p.connected ? 'is-disconnected' : ''}>
+                  <AvatarSprite avatarId={p.avatarId} tint={p.tint} size={40} animation="idle" />
+                  <span>
+                    {p.name}
+                    {p.isBot && <span className="npc-badge">NPC</span>}
+                    {team && (
+                      <span className="npc-badge" style={{ background: team.color, color: '#fff' }}>
+                        {team.emblem}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </PixelPanel>

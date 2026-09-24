@@ -1,6 +1,13 @@
 import { RoomClient } from '../core/room/client';
 import { PeerClientTransport } from '../core/net/peerTransport';
-import type { PartyScoreEntry, RoomErrorCode, RoomPhase, RoomPlayer } from '../core/room/protocol';
+import type {
+  PartyScoreEntry,
+  PartyTeamScoreEntry,
+  RoomErrorCode,
+  RoomPhase,
+  RoomPlayer,
+  Team,
+} from '../core/room/protocol';
 import { playSound } from '../core/audio/audio';
 import type { PlayerProfile } from '../core/storage/profile';
 import { showToast } from '../core/ui/toast';
@@ -20,6 +27,9 @@ export interface PartyClientState {
   errorMessage: string;
   /** True only for the very first auto-reconnect attempt after a page reload, so the UI can show a distinct message. */
   isResuming: boolean;
+  teamMode: boolean;
+  teams: Team[];
+  partyTeamScores: PartyTeamScoreEntry[];
 }
 
 function initialState(): PartyClientState {
@@ -35,6 +45,9 @@ function initialState(): PartyClientState {
     gameStatePayload: null,
     errorMessage: '',
     isResuming: false,
+    teamMode: false,
+    teams: [],
+    partyTeamScores: [],
   };
 }
 
@@ -112,10 +125,10 @@ export function joinParty(roomCode: string, profile: PlayerProfile, playerId: st
   c.on('welcome', (pid, code) => {
     setState({ status: 'connected', selfPlayerId: pid, roomCode: code, isResuming: false });
   });
-  c.on('lobby', (players, locked, phase, activeGameId, partyScores) => {
-    if (players.length > prevCount) playSound('join');
-    prevCount = players.length;
-    setState({ players, locked, phase, activeGameId, partyScores });
+  c.on('lobby', (snapshot) => {
+    if (snapshot.players.length > prevCount) playSound('join');
+    prevCount = snapshot.players.length;
+    setState(snapshot);
   });
   c.on('gameState', (payload) => setState({ gameStatePayload: payload }));
   c.on('error', (_code: RoomErrorCode, messageTh: string) => {
@@ -129,6 +142,10 @@ export function joinParty(roomCode: string, profile: PlayerProfile, playerId: st
 
 export function sendPartyIntent(payload: unknown): void {
   client?.sendIntent(payload);
+}
+
+export function choosePartyTeam(teamId: string): void {
+  client?.chooseTeam(teamId);
 }
 
 export function leaveParty(): void {

@@ -65,7 +65,7 @@ describe('RoomHost + RoomClient over LocalTransport', () => {
     const { client } = makeClient('p1', 'Alice');
 
     const lobbyEvents: string[][] = [];
-    client.on('lobby', (players) => lobbyEvents.push(players.map((p) => p.name)));
+    client.on('lobby', (snapshot) => lobbyEvents.push(snapshot.players.map((p) => p.name)));
 
     await client.connect(roomCode);
     await flush();
@@ -261,5 +261,85 @@ describe('RoomHost + RoomClient over LocalTransport', () => {
 
     expect(host.getPlayers()[0]?.name).not.toMatch(/fuck/i);
     expect(notices.length).toBeGreaterThan(0);
+  });
+
+  describe('team mode', () => {
+    it('assigns every player+bot to a team once team mode is on, and clears teamId when turned off', async () => {
+      const { host } = makeHost();
+      const { roomCode } = await host.open();
+      const { client: c1 } = makeClient('p1', 'Alice');
+      const { client: c2 } = makeClient('p2', 'Bob');
+      await c1.connect(roomCode);
+      await c2.connect(roomCode);
+      await flush();
+      host.addBot();
+
+      host.setTeamMode(true);
+      expect(host.getPlayers().every((p) => p.teamId !== null)).toBe(true);
+
+      host.setTeamMode(false);
+      expect(host.getPlayers().every((p) => p.teamId === null)).toBe(true);
+    });
+
+    it('assigns a late joiner (and a late bot) to the smallest team', async () => {
+      const { host } = makeHost();
+      const { roomCode } = await host.open();
+      host.setTeamMode(true);
+      host.setTeamCount(2);
+
+      const { client: c1 } = makeClient('p1', 'Alice');
+      await c1.connect(roomCode);
+      await flush();
+      const firstTeam = host.getPlayers()[0]!.teamId;
+
+      // Stack 3 more onto the same team so it's clearly the bigger one.
+      const { client: c2 } = makeClient('p2', 'Bob');
+      await c2.connect(roomCode);
+      await flush();
+      host.movePlayerToTeam('p2', firstTeam!);
+
+      const bot = host.addBot();
+      expect(bot?.teamId).not.toBe(firstTeam); // smallest team is the other one
+    });
+
+    it('rebalances evenly on autoBalanceTeams / setTeamCount', async () => {
+      const { host } = makeHost();
+      await host.open();
+      host.setTeamMode(true);
+      host.setTeamCount(2);
+      for (let i = 0; i < 8; i++) host.addBot();
+
+      const byTeam = new Map<string, number>();
+      for (const p of host.getPlayers()) byTeam.set(p.teamId!, (byTeam.get(p.teamId!) ?? 0) + 1);
+      const counts = [...byTeam.values()];
+      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+    });
+
+    it('lets a connected player choose their own team via the chooseTeam message', async () => {
+      const { host } = makeHost();
+      const { roomCode } = await host.open();
+      host.setTeamMode(true);
+      const teams = host.getTeams();
+
+      const { client } = makeClient('p1', 'Alice');
+      await client.connect(roomCode);
+      await flush();
+
+      const otherTeam = teams.find((t) => t.id !== host.getPlayers()[0]!.teamId)!;
+      client.chooseTeam(otherTeam.id);
+      await flush();
+
+      expect(host.getPlayers()[0]!.teamId).toBe(otherTeam.id);
+    });
+
+    it('tallies team results from endGame into getPartyTeamScores', async () => {
+      const { host } = makeHost();
+      await host.open();
+      host.setTeamMode(true);
+      const teamId = host.getTeams()[0]!.id;
+
+      host.endGame([], [{ teamId, points: 42 }]);
+      expect(host.getPartyTeamScores()).toEqual([{ teamId, name: expect.any(String), color: expect.any(String), total: 42 }]);
+    });
   });
 });

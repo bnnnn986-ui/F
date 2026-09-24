@@ -7,8 +7,16 @@ import { ItemSprite } from '../../../core/ui/ItemSprite';
 import { TimerBar } from '../../../core/ui/Timer';
 import { playSound } from '../../../core/audio/audio';
 import { RaceTrack } from './RaceTrack';
+import { TeamRaceTrack } from './TeamRaceTrack';
 import { SetupPanel } from './SetupPanel';
+import { ReportView } from './ReportView';
 import type { QuizHostAction, QuizHostViewPayload } from '../index';
+
+/** Mirrors logic/reducer.ts's getMaxPossibleScore, computed from the view payload (no full state here). */
+function maxPossibleScoreFromView(v: QuizHostViewPayload): number {
+  const questionsPlayed = v.phase === 'podium' ? v.totalQuestions : v.questionIndex + 1;
+  return Math.max(1, questionsPlayed * 1500);
+}
 
 const SHAPES = ['▲', '◆', '●', '■'];
 const PLAQUE_COLORS = ['#c0392b', '#2471a3', '#d4ac0d', '#229954'];
@@ -116,7 +124,11 @@ function QuestionHost({ v }: { v: QuizHostViewPayload }) {
           ))}
         </div>
       </PixelPanel>
-      <RaceTrack runners={v.runners} />
+      {v.teamMode && v.teamScores ? (
+        <TeamRaceTrack teamScores={v.teamScores} runners={v.runners} maxScore={maxPossibleScoreFromView(v)} />
+      ) : (
+        <RaceTrack runners={v.runners} />
+      )}
     </div>
   );
 }
@@ -158,7 +170,11 @@ function RevealHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => void 
           {v.questionIndex + 1 >= v.totalQuestions ? 'ดูผลสรุป ▶' : 'ข้อถัดไป ▶'}
         </PixelButton>
       </PixelPanel>
-      <RaceTrack runners={v.runners} />
+      {v.teamMode && v.teamScores ? (
+        <TeamRaceTrack teamScores={v.teamScores} runners={v.runners} maxScore={maxPossibleScoreFromView(v)} />
+      ) : (
+        <RaceTrack runners={v.runners} />
+      )}
     </div>
   );
 }
@@ -175,6 +191,7 @@ function PodiumHost({
   onBackToLobby: () => void;
 }) {
   const fired = useRef(false);
+  const [showReport, setShowReport] = useState(false);
   useEffect(() => {
     if (fired.current) return;
     fired.current = true;
@@ -185,12 +202,41 @@ function PodiumHost({
     }
   }, []);
 
+  if (showReport && v.report) {
+    return <ReportView report={v.report} onClose={() => setShowReport(false)} />;
+  }
+
   const top3 = v.leaderboard.slice(0, 3);
   const order = [top3[1], top3[0], top3[2]]; // 2nd, 1st, 3rd for podium visual order
 
   return (
     <PixelPanel className="quiz-podium" style={{ textAlign: 'center' }}>
       <h2>🏆 ตำนานประจำดันเจี้ยน</h2>
+
+      {v.teamMode && v.teamScores && v.teamScores.length > 0 && (
+        <div className="quiz-podium__teams">
+          <p className="quiz-setup__label">ผลกิลด์ (คะแนนเฉลี่ย)</p>
+          <ol className="party-scoreboard__list">
+            {[...v.teamScores]
+              .sort((a, b) => b.avgScore - a.avgScore)
+              .map((ts, i) => (
+                <li key={ts.team.id}>
+                  <span className="party-scoreboard__rank">#{i + 1}</span>
+                  <span className="party-scoreboard__name" style={{ color: ts.team.color }}>
+                    {ts.team.emblem} {ts.team.name}
+                  </span>
+                  <span className="party-scoreboard__total">{ts.avgScore} คะแนน</span>
+                  {ts.mvpPlayerId && (
+                    <span className="quiz-podium__mvp">
+                      MVP: {v.leaderboard.find((e) => e.player.playerId === ts.mvpPlayerId)?.player.name ?? '-'}
+                    </span>
+                  )}
+                </li>
+              ))}
+          </ol>
+        </div>
+      )}
+
       <div className="quiz-podium__stands">
         {order.map((entry, i) =>
           entry ? (
@@ -238,6 +284,9 @@ function PodiumHost({
       </ol>
 
       <div className="host-actions-row">
+        <PixelButton variant="secondary" onClick={() => setShowReport(true)}>
+          📜 ดูรายงานผล
+        </PixelButton>
         <PixelButton variant="secondary" onClick={onRestart}>
           🔁 เล่นอีกรอบ
         </PixelButton>

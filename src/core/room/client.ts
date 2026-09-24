@@ -5,21 +5,29 @@ import {
   PROTOCOL_VERSION,
   ROOM_ERROR_MESSAGES_TH,
   type PartyScoreEntry,
+  type PartyTeamScoreEntry,
   type RoomErrorCode,
   type RoomPhase,
   type RoomPlayer,
+  type Team,
   isHostToClientMessage,
 } from './protocol';
 
+/** The party-room snapshot pushed on every `lobby` event — see protocol.ts's `LobbyMessage`. */
+export interface LobbySnapshot {
+  players: RoomPlayer[];
+  locked: boolean;
+  phase: RoomPhase;
+  activeGameId: string | null;
+  partyScores: PartyScoreEntry[];
+  teamMode: boolean;
+  teams: Team[];
+  partyTeamScores: PartyTeamScoreEntry[];
+}
+
 export type RoomClientEvents = {
   welcome: (playerId: string, roomCode: string) => void;
-  lobby: (
-    players: RoomPlayer[],
-    locked: boolean,
-    phase: RoomPhase,
-    activeGameId: string | null,
-    partyScores: PartyScoreEntry[],
-  ) => void;
+  lobby: (snapshot: LobbySnapshot) => void;
   gameState: (payload: unknown) => void;
   error: (code: RoomErrorCode, messageTh: string) => void;
   notice: (messageTh: string) => void;
@@ -93,6 +101,11 @@ export class RoomClient extends Emitter<RoomClientEvents> {
     this.transport.send({ v: PROTOCOL_VERSION, t: 'gameIntent', payload });
   }
 
+  /** Self-selects a team from the party lobby (only takes effect while team mode is on). */
+  chooseTeam(teamId: string): void {
+    this.transport.send({ v: PROTOCOL_VERSION, t: 'chooseTeam', teamId });
+  }
+
   updateProfile(name: string, avatarId: string, tint: number): void {
     this.name = name;
     this.avatarId = avatarId;
@@ -118,7 +131,16 @@ export class RoomClient extends Emitter<RoomClientEvents> {
         this.emit('welcome', data.playerId, data.roomCode);
         break;
       case 'lobby':
-        this.emit('lobby', data.players, data.locked, data.phase, data.activeGameId, data.partyScores);
+        this.emit('lobby', {
+          players: data.players,
+          locked: data.locked,
+          phase: data.phase,
+          activeGameId: data.activeGameId,
+          partyScores: data.partyScores,
+          teamMode: data.teamMode,
+          teams: data.teams,
+          partyTeamScores: data.partyTeamScores,
+        });
         break;
       case 'gameState':
         this.emit('gameState', data.payload);

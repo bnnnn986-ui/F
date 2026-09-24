@@ -1,16 +1,18 @@
 import { Emitter } from '../net/emitter';
 import { generateRoomCode, roomCodeToPeerId } from '../net/roomCode';
 import type { HostTransport, PeerId } from '../net/transport';
-import type { GameHost, GameHostContext, PartyResult } from '../../games/types';
+import type { GameHost, GameHostContext, PartyResult, TeamPartyResult } from '../../games/types';
 import { loadGameModule } from '../../games/registry';
 import { HEROES } from '../sprites/heroes';
 import { TINT_COUNT } from '../sprites/recolor';
 import { sanitizeName } from './nameFilter';
 import { saveSnapshotToStorage, type HostSnapshot } from './snapshot';
+import { balancedAssign, createTeams, smallestTeam, type Team } from './teams';
 import {
   PROTOCOL_VERSION,
   type HostToClientMessage,
   type PartyScoreEntry,
+  type PartyTeamScoreEntry,
   type RoomPhase,
   type RoomPlayer,
   isClientToHostMessage,
@@ -64,6 +66,9 @@ export class RoomHost extends Emitter<RoomHostEvents> {
   private roomCode = '';
   private tickTimer: ReturnType<typeof setInterval> | undefined;
   private lastSnapshotSaveAt = 0;
+  private teamMode = false;
+  private teams: Team[] = [];
+  private partyTeamScores = new Map<string, number>(); // teamId -> cumulative points
 
   constructor(opts: RoomHostOptions) {
     super();
@@ -77,7 +82,9 @@ export class RoomHost extends Emitter<RoomHostEvents> {
     return {
       getPlayers: () => this.getPlayers(),
       requestBroadcast: () => this.broadcastGameState(),
-      endGame: (results) => this.endGame(results),
+      endGame: (results, teamResults) => this.endGame(results, teamResults),
+      getTeamMode: () => this.teamMode,
+      getTeams: () => this.teams,
     };
   }
 
@@ -116,6 +123,9 @@ export class RoomHost extends Emitter<RoomHostEvents> {
       this.players.set(p.playerId, { ...p, peerId: p.isBot ? p.peerId : '', connected: p.isBot });
     }
     this.partyScores = new Map(snapshot.partyScores.map((s) => [s.playerId, s.total]));
+    this.teamMode = snapshot.teamMode ?? false;
+    this.teams = snapshot.teams ?? [];
+    this.partyTeamScores = new Map((snapshot.partyTeamScores ?? []).map((s) => [s.teamId, s.total]));
 
     let lastError: unknown;
     for (let attempt = 0; attempt < RESTORE_RETRY_ATTEMPTS; attempt++) {
@@ -174,6 +184,72 @@ export class RoomHost extends Emitter<RoomHostEvents> {
     this.broadcastLobby();
   }
 
+  // ---- Team ("guild") mode ----
+
+  getTeamMode(): boolean {
+    return this.teamMode;
+  }
+
+  getTeams(): Team[] {
+    return this.teams;
+  }
+
+  /** Turns team mode on (creating teams if needed) or off (clearing every player's teamId). */
+  setTeamMode(on: boolean): void {
+    this.teamMode = on;
+    if (on) {
+      if (this.teams.length === 0) this.teams = createTeams(4);
+      this.autoBalanceTeams();
+    } else {
+      for (const p of this.players.values()) p.teamId = null;
+      this.broadcastLobby();
+    }
+  }
+
+  /** Changes the number of teams (2-6), keeping ids stable where possible, then rebalances. */
+  setTeamCount(count: number): void {
+    this.teams = createTeams(count);
+    if (this.teamMode) this.autoBalanceTeams();
+    else this.broadcastLobby();
+  }
+
+  /** "สุ่มแบ่งทีม" — evenly (re)distributes every current player across the current teams. */
+  autoBalanceTeams(): void {
+    if (this.teams.length === 0) return;
+    const assignment = balancedAssign(
+      [...this.players.values()].map((p) => p.playerId),
+      this.teams,
+    );
+    for (const p of this.players.values()) p.teamId = assignment.get(p.playerId) ?? null;
+    this.broadcastLobby();
+  }
+
+  /** Host taps a player to cycle them to a specific team (drag-and-drop substitute). */
+  movePlayerToTeam(playerId: string, teamId: string): void {
+    const player = this.players.get(playerId);
+    if (!player || !this.teams.some((t) => t.id === teamId)) return;
+    player.teamId = teamId;
+    this.broadcastLobby();
+  }
+
+  /** Assigns a newly-joined player/bot to the smallest team, when team mode is on. */
+  private autoAssignTeamForNewPlayer(): string | null {
+    if (!this.teamMode || this.teams.length === 0) return null;
+    const assignment = new Map(
+      [...this.players.values()].filter((p) => p.teamId).map((p) => [p.playerId, p.teamId as string]),
+    );
+    return smallestTeam(this.teams, assignment).id;
+  }
+
+  getPartyTeamScores(): PartyTeamScoreEntry[] {
+    return [...this.partyTeamScores.entries()]
+      .map(([teamId, total]) => {
+        const team = this.teams.find((t) => t.id === teamId);
+        return { teamId, name: team?.name ?? teamId, color: team?.color ?? '#888', total };
+      })
+      .sort((a, b) => b.total - a.total);
+  }
+
   /** Adds a host-side NPC player (no transport) with a random hero+tint and fantasy name. */
   addBot(): RoomPlayer | null {
     const botCount = this.getPlayers().filter((p) => p.isBot).length;
@@ -194,7 +270,9 @@ export class RoomHost extends Emitter<RoomHostEvents> {
       isBot: true,
       score: 0,
       joinedAt: Date.now(),
+      teamId: null,
     };
+    bot.teamId = this.autoAssignTeamForNewPlayer();
     this.players.set(playerId, bot);
     this.game?.onPlayerJoin?.(playerId);
     this.broadcastLobby();
@@ -234,9 +312,12 @@ export class RoomHost extends Emitter<RoomHostEvents> {
    * forced by the host pressing "กลับโรงเตี๊ยม"): tallies `results` into
    * the party scoreboard and returns everyone to the lobby.
    */
-  endGame(results: PartyResult[] = []): void {
+  endGame(results: PartyResult[] = [], teamResults: TeamPartyResult[] = []): void {
     for (const r of results) {
       this.partyScores.set(r.playerId, (this.partyScores.get(r.playerId) ?? 0) + r.points);
+    }
+    for (const r of teamResults) {
+      this.partyTeamScores.set(r.teamId, (this.partyTeamScores.get(r.teamId) ?? 0) + r.points);
     }
     this.stopTickLoop();
     this.game?.dispose?.();
@@ -274,6 +355,9 @@ export class RoomHost extends Emitter<RoomHostEvents> {
       activeGameId: this.activeGameId,
       gameState: this.game?.serialize?.() ?? null,
       savedAt: Date.now(),
+      teamMode: this.teamMode,
+      teams: this.teams,
+      partyTeamScores: this.getPartyTeamScores(),
     };
   }
 
@@ -324,6 +408,9 @@ export class RoomHost extends Emitter<RoomHostEvents> {
       phase: this.phase,
       activeGameId: this.activeGameId,
       partyScores: this.getPartyScores(),
+      teamMode: this.teamMode,
+      teams: this.teams,
+      partyTeamScores: this.getPartyTeamScores(),
     };
     this.broadcast(msg);
     this.emit('lobbyChange', this.getPlayers(), this.locked);
@@ -367,6 +454,12 @@ export class RoomHost extends Emitter<RoomHostEvents> {
       if (!playerId) return;
       this.game?.onIntent(playerId, data.payload);
       this.broadcastGameState();
+      return;
+    }
+    if (data.t === 'chooseTeam') {
+      const playerId = this.peerToPlayer.get(peerId);
+      if (!playerId || !this.teamMode) return;
+      this.movePlayerToTeam(playerId, data.teamId);
       return;
     }
   };
@@ -419,6 +512,7 @@ export class RoomHost extends Emitter<RoomHostEvents> {
         isBot: false,
         score: 0,
         joinedAt: Date.now(),
+        teamId: this.autoAssignTeamForNewPlayer(),
       };
       this.players.set(playerId, player);
       this.peerToPlayer.set(peerId, playerId);

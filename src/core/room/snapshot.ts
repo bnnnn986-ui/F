@@ -1,4 +1,4 @@
-import type { PartyScoreEntry, RoomPlayer } from './protocol';
+import type { PartyScoreEntry, PartyTeamScoreEntry, RoomPlayer, Team } from './protocol';
 import { setItem, getItem } from '../storage/storage';
 
 /** Host-side room snapshot, persisted to localStorage so a host reload can offer to resume the same room. */
@@ -10,6 +10,9 @@ export interface HostSnapshot {
   activeGameId: string | null;
   gameState: unknown;
   savedAt: number;
+  teamMode: boolean;
+  teams: Team[];
+  partyTeamScores: PartyTeamScoreEntry[];
 }
 
 export const HOST_SNAPSHOT_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes

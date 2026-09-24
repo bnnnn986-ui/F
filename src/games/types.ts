@@ -1,5 +1,5 @@
 import type { ComponentType } from 'preact';
-import type { RoomPlayer } from '../core/room/protocol';
+import type { RoomPlayer, Team } from '../core/room/protocol';
 
 export type GameStatus = 'ready' | 'soon';
 
@@ -26,6 +26,12 @@ export interface PartyResult {
   points: number;
 }
 
+/** One TEAM's result at the end of a team-mode game round, reported back to the party room. */
+export interface TeamPartyResult {
+  teamId: string;
+  points: number;
+}
+
 /** Everything a game's host-side logic needs from the room runtime. */
 export interface GameHostContext {
   getPlayers(): RoomPlayer[];
@@ -33,11 +39,16 @@ export interface GameHostContext {
   requestBroadcast(): void;
   /**
    * Ends the current game: adds `results` to each player's cumulative party
-   * score and returns the room to the party lobby, where the host can pick
+   * score (and `teamResults` to each team's, if the game was played in team
+   * mode) and returns the room to the party lobby, where the host can pick
    * the next game. Call with no results (or an empty array) to just bail
    * out without awarding points.
    */
-  endGame(results?: PartyResult[]): void;
+  endGame(results?: PartyResult[], teamResults?: TeamPartyResult[]): void;
+  /** Whether "โหมดกิลด์" (team mode) is currently on for this room. */
+  getTeamMode(): boolean;
+  /** The room's current teams (empty when team mode has never been turned on). */
+  getTeams(): Team[];
 }
 
 /**
