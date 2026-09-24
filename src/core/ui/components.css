@@ -337,13 +337,20 @@
   gap: var(--pp-space-2);
   cursor: pointer;
   user-select: none;
+  position: relative;
 }
+/* Sits directly over the track (not visually-hidden off to a corner) so a real click/tap always
+   lands on the actual `<input>` — the decorative track/thumb underneath never intercept it. */
 .pp-toggle__input {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+  top: 0;
+  left: 0;
+  width: 44px;
+  height: 24px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
 }
 .pp-toggle__track {
   flex: none;
@@ -354,6 +361,7 @@
   border-radius: 12px;
   position: relative;
   transition: background 120ms ease;
+  pointer-events: none;
 }
 .pp-toggle__thumb {
   position: absolute;
