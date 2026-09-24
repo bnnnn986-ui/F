@@ -1,5 +1,7 @@
 import { PixelPanel } from '../core/ui/PixelPanel';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
+import { EmblemIcon } from '../core/ui/Icon';
+import type { EmblemName } from '../core/sprites/icons';
 import type { RoomPlayer, Team } from '../core/room/protocol';
 import { getTeam } from '../core/room/teams';
 
@@ -26,7 +28,7 @@ export function PlayerLobby({
         <p className="player-lobby__name">{self?.name ?? '...'}</p>
         {myTeam && (
           <p className="player-lobby__team" style={{ color: myTeam.color }}>
-            {myTeam.emblem} {myTeam.name}
+            <EmblemIcon name={myTeam.emblem as EmblemName} className="pp-icon--md" /> {myTeam.name}
           </p>
         )}
         <p className="player-lobby__waiting">รอผู้คุมเกมเริ่มภารกิจ…</p>
@@ -44,7 +46,7 @@ export function PlayerLobby({
                 style={self?.teamId === team.id ? { background: team.color, color: '#fff' } : undefined}
                 onClick={() => onChooseTeam(team.id)}
               >
-                {team.emblem} {team.name}
+                <EmblemIcon name={team.emblem as EmblemName} className="pp-icon--sm" /> {team.name}
               </button>
             ))}
           </div>
@@ -67,7 +69,7 @@ export function PlayerLobby({
                     {p.isBot && <span className="npc-badge">NPC</span>}
                     {team && (
                       <span className="npc-badge" style={{ background: team.color, color: '#fff' }}>
-                        {team.emblem}
+                        <EmblemIcon name={team.emblem as EmblemName} className="pp-icon--sm" />
                       </span>
                     )}
                   </span>

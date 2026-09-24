@@ -1,6 +1,8 @@
 import { PixelPanel } from '../core/ui/PixelPanel';
 import { PixelButton } from '../core/ui/PixelButton';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
+import { EmblemIcon } from '../core/ui/Icon';
+import type { EmblemName } from '../core/sprites/icons';
 import type { RoomPlayer, Team } from '../core/room/protocol';
 import { MAX_TEAMS, MIN_TEAMS } from '../core/room/teams';
 
@@ -53,7 +55,7 @@ export function TeamPanel({
               ))}
             </div>
             <PixelButton variant="secondary" onClick={onAutoBalance}>
-              🎲 สุ่มแบ่งทีม
+              สุ่มแบ่งทีม
             </PixelButton>
           </div>
 
@@ -63,7 +65,7 @@ export function TeamPanel({
               return (
                 <div key={team.id} className="team-panel__team" style={{ borderColor: team.color }}>
                   <p className="team-panel__team-name" style={{ color: team.color }}>
-                    {team.emblem} {team.name} ({members.length})
+                    <EmblemIcon name={team.emblem as EmblemName} className="pp-icon--md" /> {team.name} ({members.length})
                   </p>
                   <div className="team-panel__members">
                     {members.map((p) => (

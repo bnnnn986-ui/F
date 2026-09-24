@@ -356,7 +356,8 @@
 }
 
 .npc-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   margin-left: 0.3em;
   font-size: 0.6rem;
   background: var(--pp-accent);
@@ -365,6 +366,7 @@
   padding: 0.1em 0.3em;
   vertical-align: middle;
 }
+.npc-badge .pp-icon { width: 14px; height: 14px; }
 
 .host-lobby__bots {
   display: flex;

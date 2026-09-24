@@ -12,18 +12,22 @@ export interface Team {
   color: string;
   /** Which avatar recolor tint (0-7) this team's colour corresponds to, for "ใช้สีทีม". */
   tint: number;
-  /** A simple emoji emblem (keeps this generic module free of sprite/canvas deps). */
+  /**
+   * The `EmblemName` (from `core/sprites/icons.ts`) to render as this
+   * team's heraldic shield — kept as a plain string here so this module
+   * stays free of sprite/canvas deps; UI renders it via `<EmblemIcon>`.
+   */
   emblem: string;
 }
 
 /** Up to 6 teams; ids are stable so player assignments survive a team-count change that keeps a team. */
 export const DEFAULT_TEAM_POOL: Team[] = [
-  { id: 'team-red', name: 'กิลด์มังกรแดง', color: '#e8552f', tint: 4, emblem: '🐉' },
-  { id: 'team-blue', name: 'กิลด์หมาป่าฟ้า', color: '#3a8fd4', tint: 1, emblem: '🐺' },
-  { id: 'team-green', name: 'กิลด์นกฮูกเขียว', color: '#4fae5e', tint: 5, emblem: '🦉' },
-  { id: 'team-gold', name: 'กิลด์สิงโตทอง', color: '#e8b23d', tint: 7, emblem: '🦁' },
-  { id: 'team-purple', name: 'กิลด์งูม่วง', color: '#9d5bd6', tint: 2, emblem: '🐍' },
-  { id: 'team-pink', name: 'กิลด์กระต่ายชมพู', color: '#e85b9e', tint: 3, emblem: '🐇' },
+  { id: 'team-red', name: 'กิลด์มังกรแดง', color: '#e8552f', tint: 4, emblem: 'dragon' },
+  { id: 'team-blue', name: 'กิลด์หมาป่าฟ้า', color: '#3a8fd4', tint: 1, emblem: 'wolf' },
+  { id: 'team-green', name: 'กิลด์นกฮูกเขียว', color: '#4fae5e', tint: 5, emblem: 'owl' },
+  { id: 'team-gold', name: 'กิลด์สิงโตทอง', color: '#e8b23d', tint: 7, emblem: 'lion' },
+  { id: 'team-purple', name: 'กิลด์งูม่วง', color: '#9d5bd6', tint: 2, emblem: 'snake' },
+  { id: 'team-pink', name: 'กิลด์กระต่ายชมพู', color: '#e85b9e', tint: 3, emblem: 'rabbit' },
 ];
 
 export const MIN_TEAMS = 2;

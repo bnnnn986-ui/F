@@ -232,6 +232,9 @@
   vertical-align: middle;
   image-rendering: pixelated;
 }
+/* Inline-with-text sizes, distinct from the component's own 1x/2x (32/64px) native scale. */
+.pp-icon--sm { width: 16px !important; height: 16px !important; }
+.pp-icon--md { width: 20px !important; height: 20px !important; }
 .pp-icon-stack {
   position: relative;
   display: inline-block;
