@@ -1,0 +1,118 @@
+/** Small decorative pixel icons (single frame, 16x16), hand-drawn. */
+
+export const TROPHY: string[] = [
+  '................',
+  '....yyyyyyyy....',
+  '...yYYYYYYYYy...',
+  '...yYwYYYYwYy...',
+  'y..yYYYYYYYYy..y',
+  'y..yYYYYYYYYy..y',
+  '...yYYYYYYYYy...',
+  '....yYYYYYYy....',
+  '.....yYYYYy.....',
+  '......yYYy......',
+  '......yYYy......',
+  '.....yYYYYy.....',
+  '....yYYYYYYy....',
+  '....yyyyyyyy....',
+  '................',
+  '................',
+];
+
+export const STAR: string[] = [
+  '.......yy.......',
+  '.......yy.......',
+  '......yyyy......',
+  '......yyyy......',
+  'yy....yyyy....yy',
+  'yyyy..yyyy..yyyy',
+  '.yyyyyyyyyyyyyy.',
+  '..yyyyyyyyyyyy..',
+  '...yyyyyyyyyy...',
+  '...yyyyyyyyyy...',
+  '..yyyyy..yyyyy..',
+  '.yyyy......yyyy.',
+  'yyy..........yyy',
+  '................',
+  '................',
+  '................',
+];
+
+export const CROWN: string[] = [
+  '................',
+  '................',
+  'y....y....y....y',
+  'yy...yy..yy...yy',
+  'yYy.yYYy.yYYy.yY',
+  'yYYyYYYYyYYYyyY.',
+  'yYYYYYYYYYYYYYY.',
+  'yYYYYYYYYYYYYYY.',
+  'yYYYYYYYYYYYYYY.',
+  '.yyyyyyyyyyyyy..',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+
+export const HEART: string[] = [
+  '................',
+  '..rr....rr......',
+  '.rRRr..rRRr.....',
+  'rRRRRrrRRRRr....',
+  'rRRRRRRRRRRr....',
+  'rRRRRRRRRRRr....',
+  '.rRRRRRRRRr.....',
+  '..rRRRRRRr......',
+  '...rRRRRr.......',
+  '....rRRr........',
+  '.....rr.........',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+
+export const COIN: string[] = [
+  '................',
+  '.....yyyyyy.....',
+  '...yyYYYYYYyy...',
+  '..yYYwwwwwwYYy..',
+  '.yYYwwYYYYwwYYy.',
+  '.yYwwYYyyYYwwYy.',
+  'yYYwYYyy..yYwwYy',
+  'yYYwYYy....yYwYy',
+  'yYYwYYyy..yYwwYy',
+  '.yYwwYYyyYYwwYy.',
+  '.yYYwwYYYYwwYYy.',
+  '..yYYYYYYYYYYy..',
+  '...yyYYYYYYyy...',
+  '.....yyyyyy.....',
+  '................',
+  '................',
+];
+
+export const FLAG: string[] = [
+  '..k.............',
+  '..k..rrrrrrrr...',
+  '..k..rRRRRRrr...',
+  '..k..rrrrrRrr...',
+  '..k..rRRRRrrr...',
+  '..k..rrrrrrr....',
+  '..k.............',
+  '..k.............',
+  '..k.............',
+  '..k.............',
+  '..k.............',
+  '..k.............',
+  '..k.............',
+  '.kkk............',
+  '................',
+  '................',
+];
+
+export const DECOR = { trophy: TROPHY, star: STAR, crown: CROWN, heart: HEART, coin: COIN, flag: FLAG };
+export type DecorId = keyof typeof DECOR;

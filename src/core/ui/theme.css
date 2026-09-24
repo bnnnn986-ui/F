@@ -1,0 +1,105 @@
+/* Pixel Party design tokens — a warm, limited retro palette (own mix,
+   inspired by NES/PICO-8 but not copied). Chunky pixel borders are built
+   from stacked box-shadows so every panel keeps hard, un-anti-aliased
+   edges even at large sizes. */
+:root {
+  /* Palette */
+  --pp-bg-deep: #1a1c2c;
+  --pp-bg: #2b2e4a;
+  --pp-bg-soft: #3e4269;
+  --pp-panel: #f4ead1;
+  --pp-panel-ink: #2b2e4a;
+  --pp-ink: #1a1c2c;
+  --pp-paper: #fff6e0;
+  --pp-primary: #ff6b6b;
+  --pp-primary-ink: #7a1f1f;
+  --pp-secondary: #4fd6c4;
+  --pp-secondary-ink: #124f47;
+  --pp-accent: #ffd166;
+  --pp-accent-ink: #7a5300;
+  --pp-danger: #e8425b;
+  --pp-danger-ink: #4a0e17;
+  --pp-success: #6ee36e;
+  --pp-success-ink: #1e5a1e;
+  --pp-line: #0f1020;
+
+  --pp-radius: 4px;
+  --pp-border: 4px;
+  --pp-font-latin: 'Pixelify Sans', 'Kanit', system-ui, sans-serif;
+  --pp-font-thai: 'Kanit', 'Pixelify Sans', system-ui, sans-serif;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--pp-bg-deep);
+  color: var(--pp-paper);
+  font-family: var(--pp-font-thai);
+  font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+#app {
+  min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+}
+
+img, canvas {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+h1, h2, h3 {
+  font-family: var(--pp-font-latin);
+  line-height: 1.25;
+  margin: 0 0 0.5em;
+}
+
+button, input {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: var(--pp-accent);
+  color: var(--pp-ink);
+}
+
+/* Utility: stepped pixel border box-shadow, reused by components */
+.pixel-border {
+  border: var(--pp-border) solid var(--pp-line);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.15),
+    0 4px 0 var(--pp-line);
+  border-radius: var(--pp-radius);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

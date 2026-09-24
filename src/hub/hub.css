@@ -1,0 +1,266 @@
+.hub-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 3rem;
+}
+
+.hub-hero {
+  text-align: center;
+  padding: 1.5rem 0 1rem;
+}
+
+.hub-hero__topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.hub-hero__logo {
+  font-family: var(--pp-font-latin);
+  font-weight: 700;
+  font-size: clamp(1.8rem, 7vw, 3.4rem);
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hub-hero__letter {
+  display: inline-block;
+  color: var(--pp-accent);
+  text-shadow:
+    3px 3px 0 var(--pp-primary),
+    6px 6px 0 var(--pp-line);
+  animation: pp-letter-bounce 2.4s ease-in-out infinite;
+}
+
+@keyframes pp-letter-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-hero__letter { animation: none; }
+}
+
+.hub-hero__tagline {
+  font-size: 1.05rem;
+  color: var(--pp-paper);
+  opacity: 0.9;
+  margin: 0.75rem 0 1rem;
+}
+
+.hub-hero__mascots {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.hub-hero__cta {
+  margin-top: 1.25rem;
+}
+
+.hub-page__catalogue-lead {
+  text-align: center;
+  opacity: 0.75;
+  margin: 0 0 0.75rem;
+}
+
+.hub-page__join {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 10;
+  margin-bottom: 1.5rem;
+}
+
+.join-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.join-panel__label {
+  font-family: var(--pp-font-latin);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.join-panel__row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.join-panel__row .pixel-input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 1.4rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.join-panel__hint {
+  color: var(--pp-danger);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.game-picker__grid {
+  margin-top: 0.75rem;
+}
+
+.game-picker__selected .game-card {
+  outline: 4px solid var(--pp-accent);
+  outline-offset: 2px;
+}
+
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.game-card {
+  position: relative;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.game-card:disabled {
+  cursor: default;
+  filter: grayscale(0.5);
+  opacity: 0.85;
+}
+
+.game-card__ribbon {
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  transform: rotate(6deg);
+}
+
+.game-card__thumb {
+  display: flex;
+  gap: 0.4rem;
+  background: var(--pp-bg);
+  border: 3px solid var(--pp-line);
+  border-radius: 3px;
+  padding: 0.5rem;
+  justify-content: center;
+}
+
+.game-card__title {
+  font-family: var(--pp-font-thai);
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.game-card__subtitle {
+  font-family: var(--pp-font-latin);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin: 0;
+}
+
+.game-card__desc {
+  font-size: 0.9rem;
+  margin: 0;
+  opacity: 0.85;
+  flex: 1;
+}
+
+.game-card__meta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.game-card__tags {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.how-to-play {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.how-to-play li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.how-to-play__num {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--pp-primary);
+  color: var(--pp-primary-ink);
+  border: 3px solid var(--pp-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--pp-font-latin);
+  font-weight: 700;
+}
+
+.how-to-play__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hub-footer {
+  margin-top: 2.5rem;
+  text-align: center;
+}
+
+.hub-footer__steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.hub-footer__step {
+  background: var(--pp-bg-soft);
+  border: 3px solid var(--pp-line);
+  border-radius: var(--pp-radius);
+  padding: 1rem;
+}
+
+.hub-footer__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--pp-secondary);
+  color: var(--pp-secondary-ink);
+  font-family: var(--pp-font-latin);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.hub-footer__note {
+  opacity: 0.75;
+  font-size: 0.9rem;
+}

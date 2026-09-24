@@ -1,0 +1,15 @@
+// Light flat ESLint config: TS recommended rules only, no stylistic nitpicking.
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  {
+    ignores: ['dist/**', 'node_modules/**', 'playwright-report/**', 'test-results/**'],
+  },
+  ...tseslint.configs.recommended,
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
+);
