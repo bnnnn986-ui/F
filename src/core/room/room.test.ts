@@ -211,4 +211,55 @@ describe('RoomHost + RoomClient over LocalTransport', () => {
     expect(host.getActiveGameId()).toBeNull();
     expect(host.getPartyScores()).toEqual([{ playerId: 'p1', name: 'Alice', total: 10 }]);
   });
+
+  it('adds bots with unique names up to the max, and removes them', async () => {
+    const { host } = makeHost();
+    await host.open();
+
+    const bot1 = host.addBot();
+    const bot2 = host.addBot();
+    expect(bot1?.isBot).toBe(true);
+    expect(bot2?.name).not.toBe(bot1?.name);
+
+    for (let i = 0; i < 10; i++) host.addBot();
+    const bots = host.getPlayers().filter((p) => p.isBot);
+    expect(bots.length).toBeLessThanOrEqual(10);
+
+    host.removeBot(bot1!.playerId);
+    expect(host.getPlayers().some((p) => p.playerId === bot1!.playerId)).toBe(false);
+  });
+
+  it('bans a kicked playerId from rejoining the same room', async () => {
+    const { host } = makeHost();
+    const { roomCode } = await host.open();
+    const { client } = makeClient('p1', 'Alice');
+    await client.connect(roomCode);
+    await flush();
+
+    host.kickPlayer('p1');
+    await flush();
+
+    const { client: rejoin } = makeClient('p1', 'Alice');
+    const errors: string[] = [];
+    rejoin.on('error', (code) => errors.push(code));
+    await rejoin.connect(roomCode);
+    await flush();
+
+    expect(host.getPlayers().find((p) => p.playerId === 'p1')).toBeUndefined();
+    expect(errors).toContain('kicked');
+  });
+
+  it('replaces a filtered display name and notifies the player', async () => {
+    const { host } = makeHost();
+    const { roomCode } = await host.open();
+    const { client } = makeClient('p1', 'fuckboy');
+    const notices: string[] = [];
+    client.on('notice', (msg) => notices.push(msg));
+
+    await client.connect(roomCode);
+    await flush();
+
+    expect(host.getPlayers()[0]?.name).not.toMatch(/fuck/i);
+    expect(notices.length).toBeGreaterThan(0);
+  });
 });

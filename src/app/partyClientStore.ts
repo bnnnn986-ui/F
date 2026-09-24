@@ -3,6 +3,7 @@ import { PeerClientTransport } from '../core/net/peerTransport';
 import type { PartyScoreEntry, RoomErrorCode, RoomPhase, RoomPlayer } from '../core/room/protocol';
 import { playSound } from '../core/audio/audio';
 import type { PlayerProfile } from '../core/storage/profile';
+import { showToast } from '../core/ui/toast';
 
 export type PartyConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
@@ -17,6 +18,8 @@ export interface PartyClientState {
   partyScores: PartyScoreEntry[];
   gameStatePayload: unknown;
   errorMessage: string;
+  /** True only for the very first auto-reconnect attempt after a page reload, so the UI can show a distinct message. */
+  isResuming: boolean;
 }
 
 function initialState(): PartyClientState {
@@ -31,6 +34,7 @@ function initialState(): PartyClientState {
     partyScores: [],
     gameStatePayload: null,
     errorMessage: '',
+    isResuming: false,
   };
 }
 
@@ -60,17 +64,53 @@ export function subscribePartyClient(fn: (s: PartyClientState) => void): () => v
   return () => listeners.delete(fn);
 }
 
-export function joinParty(roomCode: string, profile: PlayerProfile, playerId: string): Promise<void> {
+// ---- Reload resilience: remember the session so a page reload can silently rejoin. ----
+
+interface SavedSession {
+  roomCode: string;
+  playerId: string;
+  profile: PlayerProfile;
+}
+
+const SESSION_KEY = 'pp:session';
+
+function saveSession(session: SavedSession): void {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadSavedSession(): SavedSession | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as SavedSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearSavedSession(): void {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function joinParty(roomCode: string, profile: PlayerProfile, playerId: string, isResuming = false): Promise<void> {
   client?.close();
-  setState({ ...initialState(), status: 'connecting', roomCode, selfPlayerId: playerId });
+  setState({ ...initialState(), status: 'connecting', roomCode, selfPlayerId: playerId, isResuming });
+  saveSession({ roomCode, playerId, profile });
 
   const transport = new PeerClientTransport();
-  const c = new RoomClient({ transport, playerId, name: profile.name, avatarId: profile.avatarId });
+  const c = new RoomClient({ transport, playerId, name: profile.name, avatarId: profile.avatarId, tint: profile.tint });
   client = c;
   let prevCount = 0;
 
   c.on('welcome', (pid, code) => {
-    setState({ status: 'connected', selfPlayerId: pid, roomCode: code });
+    setState({ status: 'connected', selfPlayerId: pid, roomCode: code, isResuming: false });
   });
   c.on('lobby', (players, locked, phase, activeGameId, partyScores) => {
     if (players.length > prevCount) playSound('join');
@@ -79,8 +119,10 @@ export function joinParty(roomCode: string, profile: PlayerProfile, playerId: st
   });
   c.on('gameState', (payload) => setState({ gameStatePayload: payload }));
   c.on('error', (_code: RoomErrorCode, messageTh: string) => {
-    setState({ status: 'error', errorMessage: messageTh });
+    setState({ status: 'error', errorMessage: messageTh, isResuming: false });
+    clearSavedSession();
   });
+  c.on('notice', (messageTh) => showToast(messageTh));
 
   return c.connect(roomCode);
 }
@@ -92,5 +134,6 @@ export function sendPartyIntent(payload: unknown): void {
 export function leaveParty(): void {
   client?.close();
   client = null;
+  clearSavedSession();
   setState(initialState());
 }

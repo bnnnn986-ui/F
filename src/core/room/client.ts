@@ -22,6 +22,7 @@ export type RoomClientEvents = {
   ) => void;
   gameState: (payload: unknown) => void;
   error: (code: RoomErrorCode, messageTh: string) => void;
+  notice: (messageTh: string) => void;
   connecting: () => void;
   reconnecting: (attempt: number) => void;
 };
@@ -31,6 +32,7 @@ export interface RoomClientOptions {
   playerId: string;
   name: string;
   avatarId: string;
+  tint?: number;
   /** Max auto-reconnect attempts before giving up (exponential backoff). */
   maxReconnectAttempts?: number;
 }
@@ -49,6 +51,7 @@ export class RoomClient extends Emitter<RoomClientEvents> {
   private playerId: string;
   private name: string;
   private avatarId: string;
+  private tint: number;
   private roomCode = '';
   private reconnectAttempts = 0;
   private maxReconnectAttempts: number;
@@ -61,6 +64,7 @@ export class RoomClient extends Emitter<RoomClientEvents> {
     this.playerId = opts.playerId;
     this.name = opts.name;
     this.avatarId = opts.avatarId;
+    this.tint = opts.tint ?? 0;
     this.maxReconnectAttempts = opts.maxReconnectAttempts ?? 5;
   }
 
@@ -71,7 +75,14 @@ export class RoomClient extends Emitter<RoomClientEvents> {
     this.emit('connecting');
     try {
       await this.transport.connect(roomCodeToPeerId(roomCode));
-      this.transport.send({ v: PROTOCOL_VERSION, t: 'hello', playerId: this.playerId, name: this.name, avatarId: this.avatarId });
+      this.transport.send({
+        v: PROTOCOL_VERSION,
+        t: 'hello',
+        playerId: this.playerId,
+        name: this.name,
+        avatarId: this.avatarId,
+        tint: this.tint,
+      });
       this.reconnectAttempts = 0;
     } catch {
       this.emit('error', 'room-not-found', ROOM_ERROR_MESSAGES_TH['room-not-found']);
@@ -82,10 +93,11 @@ export class RoomClient extends Emitter<RoomClientEvents> {
     this.transport.send({ v: PROTOCOL_VERSION, t: 'gameIntent', payload });
   }
 
-  updateProfile(name: string, avatarId: string): void {
+  updateProfile(name: string, avatarId: string, tint: number): void {
     this.name = name;
     this.avatarId = avatarId;
-    this.transport.send({ v: PROTOCOL_VERSION, t: 'hello', playerId: this.playerId, name, avatarId });
+    this.tint = tint;
+    this.transport.send({ v: PROTOCOL_VERSION, t: 'hello', playerId: this.playerId, name, avatarId, tint });
   }
 
   close(): void {
@@ -113,6 +125,9 @@ export class RoomClient extends Emitter<RoomClientEvents> {
         break;
       case 'error':
         this.handleTerminalError(data.code);
+        break;
+      case 'notice':
+        this.emit('notice', data.messageTh);
         break;
       case 'pong':
         break;

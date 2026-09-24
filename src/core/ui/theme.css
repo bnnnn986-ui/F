@@ -1,30 +1,36 @@
-/* Pixel Party design tokens — a warm, limited retro palette (own mix,
-   inspired by NES/PICO-8 but not copied). Chunky pixel borders are built
-   from stacked box-shadows so every panel keeps hard, un-anti-aliased
-   edges even at large sizes. */
+/* Pixel Tavern design tokens — parchment, wood, stone and gold, a friendly
+   fantasy-tavern palette (own mix). Chunky pixel borders are built from
+   stacked box-shadows so every panel keeps hard, un-anti-aliased edges
+   even at large sizes. */
 :root {
   /* Palette */
-  --pp-bg-deep: #1a1c2c;
-  --pp-bg: #2b2e4a;
-  --pp-bg-soft: #3e4269;
-  --pp-panel: #f4ead1;
-  --pp-panel-ink: #2b2e4a;
-  --pp-ink: #1a1c2c;
-  --pp-paper: #fff6e0;
-  --pp-primary: #ff6b6b;
-  --pp-primary-ink: #7a1f1f;
-  --pp-secondary: #4fd6c4;
-  --pp-secondary-ink: #124f47;
-  --pp-accent: #ffd166;
-  --pp-accent-ink: #7a5300;
-  --pp-danger: #e8425b;
-  --pp-danger-ink: #4a0e17;
-  --pp-success: #6ee36e;
-  --pp-success-ink: #1e5a1e;
-  --pp-line: #0f1020;
+  --pp-bg-deep: #241521;     /* deep dungeon-purple background */
+  --pp-bg: #3a2a3d;
+  --pp-bg-soft: #4f3a4c;
+  --pp-panel: #ecd9ae;       /* parchment */
+  --pp-panel-ink: #4a2f1c;
+  --pp-ink: #2b1a10;
+  --pp-paper: #f6e9c9;
+  --pp-wood: #6b4226;        /* wooden plaque */
+  --pp-wood-dark: #472a17;
+  --pp-primary: #b3502e;     /* terracotta / rust */
+  --pp-primary-ink: #fdeee0;
+  --pp-secondary: #2e6b5e;   /* forest teal */
+  --pp-secondary-ink: #e6fbf3;
+  --pp-accent: #e8b23d;      /* gold */
+  --pp-accent-ink: #4a2f0a;
+  --pp-danger: #a5293d;
+  --pp-danger-ink: #fde3e3;
+  --pp-success: #4a9d5a;
+  --pp-success-ink: #eafcee;
+  --pp-line: #2b160e;        /* dark wood outline */
+  --pp-gold-glow: #ffd97a;
 
   --pp-radius: 4px;
   --pp-border: 4px;
+  /* Pixel font renders Thai and "(" ")" glyphs badly (parens look like
+     braces), so it is ONLY used via .pixel-title / .pixel-num — everything
+     else, including every heading, defaults to Kanit. */
   --pp-font-latin: 'Pixelify Sans', 'Kanit', system-ui, sans-serif;
   --pp-font-thai: 'Kanit', 'Pixelify Sans', system-ui, sans-serif;
 
@@ -61,9 +67,14 @@ img, canvas {
 }
 
 h1, h2, h3 {
-  font-family: var(--pp-font-latin);
-  line-height: 1.25;
+  font-family: var(--pp-font-thai);
+  line-height: 1.3;
   margin: 0 0 0.5em;
+}
+
+/* Latin/number-only display text (logo, room codes, big score numbers). */
+.pixel-title, .pixel-num {
+  font-family: var(--pp-font-latin);
 }
 
 button, input {
@@ -94,6 +105,11 @@ a {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Accessibility: large-text mode toggle (see LargeTextToggle.tsx). */
+:root.pp-large-text {
+  font-size: 19px;
 }
 
 @media (prefers-reduced-motion: reduce) {

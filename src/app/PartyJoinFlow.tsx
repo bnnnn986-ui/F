@@ -4,10 +4,11 @@ import { isValidRoomCode, normalizeRoomCode } from '../core/net/roomCode';
 import { PixelPanel } from '../core/ui/PixelPanel';
 import { PixelInput } from '../core/ui/PixelInput';
 import { PixelButton } from '../core/ui/PixelButton';
+import { D20Spinner } from '../core/ui/D20Spinner';
 import { PlayerForm } from '../lobby/PlayerForm';
 import { loadProfile, saveProfile, type PlayerProfile } from '../core/storage/profile';
 import { getOrCreatePlayerId } from '../core/storage/storage';
-import { joinParty } from './partyClientStore';
+import { joinParty, loadSavedSession } from './partyClientStore';
 import { usePartyClientState } from './usePartyClientState';
 import { showToast } from '../core/ui/toast';
 
@@ -15,9 +16,13 @@ import { showToast } from '../core/ui/toast';
  * `#/join` and `#/join/:code` — the one-time entry point into a party
  * room. Once connected, this screen hands off to `#/party/play` (see
  * `partyClientStore.ts`); the player never re-enters a code after this.
+ *
+ * Reload resilience: a bare `#/join` (no code, e.g. after a reload with no
+ * saved query) with a saved session from before auto-reconnects silently
+ * instead of asking the player to type the code again.
  */
 export function PartyJoinFlow({ code }: { code?: string }) {
-  const [phase, setPhase] = useState<'code' | 'profile'>(code ? 'profile' : 'code');
+  const [phase, setPhase] = useState<'code' | 'profile' | 'resuming'>(code ? 'profile' : 'code');
   const [codeInput, setCodeInput] = useState(code ?? '');
   const [touched, setTouched] = useState(false);
   const [profile] = useState<PlayerProfile>(() => loadProfile());
@@ -27,6 +32,12 @@ export function PartyJoinFlow({ code }: { code?: string }) {
     if (code) {
       setCodeInput(code);
       setPhase('profile');
+      return;
+    }
+    const saved = loadSavedSession();
+    if (saved && clientState.status === 'idle') {
+      setPhase('resuming');
+      joinParty(saved.roomCode, saved.profile, saved.playerId, true).catch(() => setPhase('code'));
     }
   }, [code]);
 
@@ -49,12 +60,22 @@ export function PartyJoinFlow({ code }: { code?: string }) {
     joinParty(roomCode, chosen, getOrCreatePlayerId()).catch(() => undefined);
   };
 
+  if (phase === 'resuming') {
+    return (
+      <div className="screen-center">
+        <PixelPanel style={{ textAlign: 'center' }}>
+          <D20Spinner label="กำลังเชื่อมต่อกลับ…" />
+        </PixelPanel>
+      </div>
+    );
+  }
+
   if (phase === 'code') {
     const valid = isValidRoomCode(roomCode);
     return (
       <div className="screen-center">
         <PixelPanel>
-          <h2>เข้าร่วมห้องปาร์ตี้</h2>
+          <h2>เข้าร่วมโรงเตี๊ยม</h2>
           <form onSubmit={submitCode} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <PixelInput
               value={codeInput}
@@ -78,7 +99,7 @@ export function PartyJoinFlow({ code }: { code?: string }) {
     return (
       <div className="screen-center">
         <PixelPanel style={{ textAlign: 'center' }}>
-          <p>กำลังเชื่อมต่อห้อง #{roomCode}…</p>
+          <D20Spinner label={`กำลังเชื่อมต่อโรงเตี๊ยม #${roomCode}…`} />
         </PixelPanel>
       </div>
     );

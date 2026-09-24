@@ -16,8 +16,11 @@ export interface RoomPlayer {
   peerId: string;
   name: string;
   avatarId: string;
+  /** Outfit hue tint (0-7), see core/sprites/recolor.ts. */
+  tint: number;
   connected: boolean;
   isHost: false;
+  isBot: boolean;
   score: number;
   joinedAt: number;
 }
@@ -35,7 +38,7 @@ export const ROOM_ERROR_MESSAGES_TH: Record<RoomErrorCode, string> = {
   'room-not-found': 'ไม่พบห้อง',
   'room-full': 'ห้องเต็ม',
   'room-locked': 'ห้องถูกล็อก',
-  'host-left': 'โฮสต์ออกจากห้องแล้ว',
+  'host-left': 'ผู้คุมเกมออกจากห้องแล้ว',
   kicked: 'คุณถูกเชิญออกจากห้อง',
   network: 'การเชื่อมต่อขัดข้อง กำลังลองใหม่…',
 };
@@ -48,6 +51,7 @@ export interface HelloMessage {
   playerId: string;
   name: string;
   avatarId: string;
+  tint: number;
 }
 
 export interface GameIntentMessage {
@@ -101,7 +105,20 @@ export interface PongMessage {
   t: 'pong';
 }
 
-export type HostToClientMessage = WelcomeMessage | LobbyMessage | ErrorMessage | GameStateMessage | PongMessage;
+/** A non-terminal heads-up for one player, e.g. "we bumped your colour so you're unique." */
+export interface NoticeMessage {
+  v: 1;
+  t: 'notice';
+  messageTh: string;
+}
+
+export type HostToClientMessage =
+  | WelcomeMessage
+  | LobbyMessage
+  | ErrorMessage
+  | GameStateMessage
+  | PongMessage
+  | NoticeMessage;
 
 /** Structural check shared by both directions: has our version tag + a `t` discriminator. */
 function isVersionedMessage(data: unknown): data is { v: 1; t: string } {
@@ -118,5 +135,5 @@ export function isClientToHostMessage(data: unknown): data is ClientToHostMessag
 }
 
 export function isHostToClientMessage(data: unknown): data is HostToClientMessage {
-  return isVersionedMessage(data) && ['welcome', 'lobby', 'error', 'gameState', 'pong'].includes(data.t);
+  return isVersionedMessage(data) && ['welcome', 'lobby', 'error', 'gameState', 'pong', 'notice'].includes(data.t);
 }

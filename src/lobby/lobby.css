@@ -27,15 +27,87 @@
 }
 
 .avatar-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.avatar-picker__tabs {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.avatar-picker__tab {
+  flex: 1;
+  background: var(--pp-bg);
+  color: var(--pp-paper);
+  border: 3px solid var(--pp-line);
+  border-radius: var(--pp-radius);
+  padding: 0.5em;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.avatar-picker__tab.is-active {
+  background: var(--pp-accent);
+  color: var(--pp-accent-ink);
+}
+
+.avatar-picker__preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--pp-bg);
+  border: 3px solid var(--pp-line);
+  border-radius: var(--pp-radius);
+  padding: 0.6rem;
+}
+
+.avatar-picker__preview-name {
+  font-family: var(--pp-font-latin);
+  font-weight: 700;
+  margin: 0 0 0.2rem;
+  color: var(--pp-paper);
+}
+
+.avatar-picker__preview-flavour {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  color: var(--pp-paper);
+}
+
+.avatar-picker__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
   gap: 0.4rem;
-  max-height: 260px;
+  max-height: 220px;
   overflow-y: auto;
   padding: 0.5rem;
   background: var(--pp-bg);
   border: 3px solid var(--pp-line);
   border-radius: var(--pp-radius);
+}
+
+.avatar-picker__swatches {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.avatar-picker__swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--pp-line);
+  cursor: pointer;
+  padding: 0;
+}
+
+.avatar-picker__swatch.is-selected {
+  outline: 3px solid var(--pp-paper);
+  outline-offset: 2px;
 }
 
 .avatar-picker__item {
@@ -264,6 +336,22 @@
 
 .party-scoreboard__name {
   flex: 1;
+}
+
+.npc-badge {
+  display: inline-block;
+  margin-left: 0.3em;
+  font-size: 0.6rem;
+  background: var(--pp-accent);
+  color: var(--pp-accent-ink);
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+  vertical-align: middle;
+}
+
+.host-lobby__bots {
+  display: flex;
+  justify-content: center;
 }
 
 .host-lobby__hint {

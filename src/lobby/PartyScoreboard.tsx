@@ -1,5 +1,5 @@
 import { PixelPanel } from '../core/ui/PixelPanel';
-import { DecorSprite } from '../core/ui/DecorSprite';
+import { ItemSprite } from '../core/ui/ItemSprite';
 import type { PartyScoreEntry } from '../core/room/protocol';
 
 /** Cumulative-score mini leaderboard, shown in the party lobby once at least one game has ended. */
@@ -8,7 +8,7 @@ export function PartyScoreboard({ scores }: { scores: PartyScoreEntry[] }) {
   return (
     <PixelPanel dark className="party-scoreboard">
       <h2>
-        <DecorSprite id="trophy" size={28} /> แชมป์ประจำงาน
+        <ItemSprite id="trophy" size={28} /> ตำนานประจำงาน
       </h2>
       <ol className="party-scoreboard__list">
         {scores.map((s, i) => (

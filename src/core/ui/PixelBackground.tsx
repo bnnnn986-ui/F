@@ -1,6 +1,16 @@
 import { useEffect, useRef } from 'preact/hooks';
 
-interface Star {
+interface Ember {
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  drift: number;
+  flicker: number;
+  life: number; // 0-1, resets when it reaches 1
+}
+
+interface DustMote {
   x: number;
   y: number;
   size: number;
@@ -8,34 +18,15 @@ interface Star {
   twinkle: number;
 }
 
-interface Cloud {
-  x: number;
-  y: number;
-  scale: number;
-  speed: number;
-}
-
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-function drawPixelCloud(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-  ctx.fillStyle = 'rgba(244, 234, 209, 0.5)';
-  const blocks: [number, number, number, number][] = [
-    [0, 4, 16, 4],
-    [4, 0, 10, 4],
-    [-4, 6, 4, 2],
-    [16, 6, 4, 2],
-  ];
-  for (const [bx, by, bw, bh] of blocks) {
-    ctx.fillRect(x + bx * scale, y + by * scale, bw * scale, bh * scale);
-  }
-}
-
 /**
- * Full-bleed animated pixel background: a soft parallax field of twinkling
- * stars plus slow-drifting pixel clouds. Respects prefers-reduced-motion by
- * rendering a single static frame.
+ * Full-bleed animated pixel background for the tavern theme: a deep
+ * dungeon-purple gradient with slow-rising fireplace embers and drifting
+ * dust motes. Respects prefers-reduced-motion by rendering a single static
+ * frame.
  */
 export function PixelBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -47,32 +38,37 @@ export function PixelBackground() {
 
     let width = 0;
     let height = 0;
-    const stars: Star[] = [];
-    const clouds: Cloud[] = [];
+    const embers: Ember[] = [];
+    const dust: DustMote[] = [];
 
     function resize() {
       if (!canvas) return;
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
-      stars.length = 0;
-      const starCount = Math.floor((width * height) / 9000);
-      for (let i = 0; i < starCount; i++) {
-        stars.push({
+
+      embers.length = 0;
+      const emberCount = Math.max(12, Math.floor((width * height) / 26000));
+      for (let i = 0; i < emberCount; i++) {
+        embers.push({
           x: Math.random() * width,
-          y: Math.random() * height * 0.7,
-          size: Math.random() < 0.8 ? 2 : 3,
-          speed: 4 + Math.random() * 8,
-          twinkle: Math.random() * Math.PI * 2,
+          y: Math.random() * height,
+          size: Math.random() < 0.75 ? 2 : 3,
+          speed: 8 + Math.random() * 16,
+          drift: (Math.random() - 0.5) * 10,
+          flicker: Math.random() * Math.PI * 2,
+          life: Math.random(),
         });
       }
-      clouds.length = 0;
-      const cloudCount = Math.max(3, Math.floor(width / 340));
-      for (let i = 0; i < cloudCount; i++) {
-        clouds.push({
+
+      dust.length = 0;
+      const dustCount = Math.max(8, Math.floor(width / 90));
+      for (let i = 0; i < dustCount; i++) {
+        dust.push({
           x: Math.random() * width,
-          y: height * (0.08 + Math.random() * 0.35),
-          scale: 2 + Math.random() * 3,
-          speed: 6 + Math.random() * 10,
+          y: Math.random() * height,
+          size: 1,
+          speed: 3 + Math.random() * 4,
+          twinkle: Math.random() * Math.PI * 2,
         });
       }
     }
@@ -91,28 +87,36 @@ export function PixelBackground() {
 
       ctx.clearRect(0, 0, width, height);
       const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, '#1a1c2c');
-      grad.addColorStop(1, '#2b2e4a');
+      grad.addColorStop(0, '#241521');
+      grad.addColorStop(1, '#160c14');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
 
-      for (const star of stars) {
+      for (const mote of dust) {
         if (!reduced) {
-          star.twinkle += dt * 2;
-          star.x -= star.speed * dt * 0.2;
-          if (star.x < -4) star.x = width + 4;
+          mote.twinkle += dt * 1.5;
+          mote.x -= mote.speed * dt;
+          if (mote.x < -4) mote.x = width + 4;
         }
-        const alpha = 0.4 + 0.6 * Math.abs(Math.sin(star.twinkle));
-        ctx.fillStyle = `rgba(255, 246, 224, ${reduced ? 0.6 : alpha})`;
-        ctx.fillRect(Math.round(star.x), Math.round(star.y), star.size, star.size);
+        const alpha = 0.15 + 0.15 * Math.abs(Math.sin(mote.twinkle));
+        ctx.fillStyle = `rgba(230, 210, 190, ${reduced ? 0.2 : alpha})`;
+        ctx.fillRect(Math.round(mote.x), Math.round(mote.y), mote.size, mote.size);
       }
 
-      for (const cloud of clouds) {
+      for (const ember of embers) {
         if (!reduced) {
-          cloud.x -= cloud.speed * dt;
-          if (cloud.x < -80) cloud.x = width + 80;
+          ember.life += dt * (ember.speed / height);
+          if (ember.life >= 1) {
+            ember.life = 0;
+            ember.x = Math.random() * width;
+          }
+          ember.flicker += dt * 4;
         }
-        drawPixelCloud(ctx, cloud.x, cloud.y, cloud.scale);
+        const y = height - ember.life * height;
+        const x = ember.x + Math.sin(ember.flicker) * ember.drift;
+        const alpha = reduced ? 0.7 : 0.4 + 0.6 * (1 - ember.life) * Math.abs(Math.sin(ember.flicker));
+        ctx.fillStyle = `rgba(232, 178, 61, ${alpha})`;
+        ctx.fillRect(Math.round(x), Math.round(y), ember.size, ember.size);
       }
 
       if (!reduced) raf = requestAnimationFrame(frame);

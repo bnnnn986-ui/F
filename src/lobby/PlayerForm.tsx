@@ -15,18 +15,18 @@ export function PlayerForm({
   onSubmit: (profile: PlayerProfile) => void;
 }) {
   const [name, setName] = useState(initial.name);
-  const [avatarId, setAvatarId] = useState(initial.avatarId);
+  const [character, setCharacter] = useState({ avatarId: initial.avatarId, tint: initial.tint });
 
   const submit = (e: Event) => {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    onSubmit({ name: trimmed, avatarId });
+    onSubmit({ name: trimmed, avatarId: character.avatarId, tint: character.tint });
   };
 
   return (
     <PixelPanel className="player-form">
-      <p className="player-form__room">ห้อง #{roomCode}</p>
+      <p className="player-form__room">โรงเตี๊ยม #{roomCode}</p>
       <h2>ตั้งชื่อและเลือกตัวละคร</h2>
       <form onSubmit={submit}>
         <label htmlFor="player-name" className="visually-hidden">
@@ -41,9 +41,9 @@ export function PlayerForm({
           autoFocus
           required
         />
-        <AvatarPicker value={avatarId} onChange={setAvatarId} />
+        <AvatarPicker value={character} onChange={setCharacter} />
         <PixelButton type="submit" variant="primary" big block disabled={!name.trim()}>
-          เข้าร่วมห้อง
+          เข้าร่วมโรงเตี๊ยม
         </PixelButton>
       </form>
     </PixelPanel>

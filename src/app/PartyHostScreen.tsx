@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { navigate } from './router';
-import { getManifest } from '../games/registry';
+import { getManifest, loadGameModule } from '../games/registry';
 import type { GameModule } from '../games/types';
 import { RoomHost } from '../core/room/host';
 import { PeerHostTransport } from '../core/net/peerTransport';
@@ -10,11 +10,12 @@ import { GamePicker } from '../lobby/GamePicker';
 import { PartyScoreboard } from '../lobby/PartyScoreboard';
 import { PixelPanel } from '../core/ui/PixelPanel';
 import { PixelButton } from '../core/ui/PixelButton';
+import { D20Spinner } from '../core/ui/D20Spinner';
 import { playSound } from '../core/audio/audio';
 import { showToast } from '../core/ui/toast';
-import { loadGameModule } from '../games/registry';
+import { loadSnapshotFromStorage, isSnapshotFresh, type HostSnapshot } from '../core/room/snapshot';
 
-type OpenState = 'opening' | 'open' | 'error';
+type OpenState = 'checking-snapshot' | 'opening' | 'restoring' | 'open' | 'error';
 
 /**
  * Host screen for the whole party: creates ONE room, stays mounted on
@@ -23,7 +24,7 @@ type OpenState = 'opening' | 'open' | 'error';
  * players stay connected throughout, never re-entering a code.
  */
 export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string }) {
-  const [openState, setOpenState] = useState<OpenState>('opening');
+  const [openState, setOpenState] = useState<OpenState>('checking-snapshot');
   const [errorMsg, setErrorMsg] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
@@ -32,63 +33,121 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
   const [partyScores, setPartyScores] = useState<PartyScoreEntry[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(preselectGameId ?? null);
   const [activeModule, setActiveModule] = useState<GameModule | null>(null);
+  const [gameView, setGameView] = useState<unknown>(null);
+  const [snapshot, setSnapshot] = useState<HostSnapshot | null>(null);
 
   const hostRef = useRef<RoomHost | null>(null);
   const prevCountRef = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    setOpenState('opening');
-
-    (async () => {
-      try {
-        const transport = new PeerHostTransport();
-        const host = new RoomHost({ transport });
-        hostRef.current = host;
-
-        host.on('lobbyChange', (list, isLocked) => {
-          if (list.length > prevCountRef.current) playSound('join');
-          prevCountRef.current = list.length;
-          setPlayers(list);
-          setLocked(isLocked);
-          setPartyScores(host.getPartyScores());
-        });
-        host.on('phaseChange', (newPhase, gameId) => {
-          setPhase(newPhase);
-          if (newPhase === 'lobby') {
-            setActiveModule(null);
-            setPartyScores(host.getPartyScores());
-          } else if (gameId) {
-            loadGameModule(gameId).then((m) => !cancelled && setActiveModule(m));
-          }
-        });
-
-        const { roomCode: code } = await host.open();
-        if (cancelled) {
-          host.close();
-          return;
-        }
-        setRoomCode(code);
-        setOpenState('open');
-      } catch (err) {
-        if (cancelled) return;
-        setOpenState('error');
-        setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้างห้อง');
+  function wireHost(host: RoomHost) {
+    host.on('lobbyChange', (list, isLocked) => {
+      if (list.length > prevCountRef.current) playSound('join');
+      prevCountRef.current = list.length;
+      setPlayers(list);
+      setLocked(isLocked);
+      setPartyScores(host.getPartyScores());
+    });
+    host.on('phaseChange', (newPhase, gameId) => {
+      setPhase(newPhase);
+      if (newPhase === 'lobby') {
+        setActiveModule(null);
+        setGameView(null);
+        setPartyScores(host.getPartyScores());
+      } else if (gameId) {
+        loadGameModule(gameId).then((m) => setActiveModule(m));
       }
-    })();
+    });
+    host.on('gameViewChange', (view) => setGameView(view));
+  }
 
+  async function openFreshRoom() {
+    setOpenState('opening');
+    try {
+      const transport = new PeerHostTransport();
+      const host = new RoomHost({ transport });
+      hostRef.current = host;
+      wireHost(host);
+      const { roomCode: code } = await host.open();
+      setRoomCode(code);
+      setPhase(host.getPhase());
+      setOpenState('open');
+    } catch (err) {
+      setOpenState('error');
+      setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้างห้อง');
+    }
+  }
+
+  async function restoreRoom(snap: HostSnapshot) {
+    setOpenState('restoring');
+    try {
+      const transport = new PeerHostTransport();
+      const host = new RoomHost({ transport });
+      hostRef.current = host;
+      wireHost(host);
+      const { roomCode: code } = await host.restoreFromSnapshot(snap);
+      setRoomCode(code);
+      setPhase(host.getPhase());
+      setPlayers(host.getPlayers());
+      setPartyScores(host.getPartyScores());
+      if (host.getActiveGameId()) {
+        const module = await loadGameModule(host.getActiveGameId()!);
+        setActiveModule(module);
+      }
+      setOpenState('open');
+    } catch {
+      showToast('กู้คืนห้องเดิมไม่สำเร็จ กำลังสร้างห้องใหม่', 'error');
+      await openFreshRoom();
+    }
+  }
+
+  useEffect(() => {
+    const existing = loadSnapshotFromStorage();
+    if (existing && isSnapshotFresh(existing)) {
+      setSnapshot(existing);
+      setOpenState('checking-snapshot');
+    } else {
+      openFreshRoom();
+    }
     return () => {
-      cancelled = true;
       hostRef.current?.close();
       hostRef.current = null;
     };
   }, []);
 
-  if (openState === 'opening') {
+  if (openState === 'checking-snapshot' && snapshot) {
     return (
       <div className="screen-center">
         <PixelPanel style={{ textAlign: 'center' }}>
-          <p>กำลังสร้างห้องปาร์ตี้…</p>
+          <h2>กู้คืนห้อง #{snapshot.roomCode} ต่อไหม?</h2>
+          <p>พบห้องเดิมที่เพิ่งปิดไป ({snapshot.players.length} นักผจญภัย) จะกู้คืนหรือเริ่มห้องใหม่ดี?</p>
+          <div className="host-actions-row">
+            <PixelButton variant="primary" big onClick={() => restoreRoom(snapshot)}>
+              กู้คืนห้องเดิม
+            </PixelButton>
+            <PixelButton variant="secondary" onClick={openFreshRoom}>
+              เริ่มห้องใหม่
+            </PixelButton>
+          </div>
+        </PixelPanel>
+      </div>
+    );
+  }
+
+  if (openState === 'opening' || openState === 'checking-snapshot') {
+    return (
+      <div className="screen-center">
+        <PixelPanel style={{ textAlign: 'center' }}>
+          <D20Spinner label="กำลังสร้างโรงเตี๊ยม…" />
+        </PixelPanel>
+      </div>
+    );
+  }
+
+  if (openState === 'restoring') {
+    return (
+      <div className="screen-center">
+        <PixelPanel style={{ textAlign: 'center' }}>
+          <D20Spinner label="กำลังกู้คืนห้อง… (อาจใช้เวลาสักครู่)" />
         </PixelPanel>
       </div>
     );
@@ -113,12 +172,17 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
     const HostView = activeModule.HostView;
     return (
       <div className="screen-center">
-        <HostView view={hostRef.current?.getPlayers()} onBackToLobby={() => hostRef.current?.endGame()} />
+        <HostView
+          view={gameView}
+          onHostAction={(action) => hostRef.current?.sendHostAction(action)}
+          onBackToLobby={() => hostRef.current?.endGame()}
+        />
       </div>
     );
   }
 
   const selectedManifest = selectedGameId ? getManifest(selectedGameId) : undefined;
+  const botCount = players.filter((p) => p.isBot).length;
 
   return (
     <div className="host-lobby">
@@ -130,9 +194,22 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
         onToggleLock={() => hostRef.current?.setLocked(!locked)}
         onKick={(playerId) => {
           hostRef.current?.kickPlayer(playerId);
-          showToast('เชิญผู้เล่นออกจากห้องแล้ว');
+          showToast('เชิญนักผจญภัยออกจากโรงเตี๊ยมแล้ว');
         }}
       />
+
+      <div className="host-lobby__bots">
+        <PixelButton
+          variant="secondary"
+          disabled={botCount >= 10}
+          onClick={() => {
+            const bot = hostRef.current?.addBot();
+            if (bot) showToast(`เพิ่ม ${bot.name} (บอท) เข้าห้องแล้ว`);
+          }}
+        >
+          🤖 เพิ่มนักผจญภัย NPC ({botCount}/10)
+        </PixelButton>
+      </div>
 
       <PartyScoreboard scores={partyScores} />
 
@@ -146,9 +223,9 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
           disabled={!selectedGameId || players.length < 1}
           onClick={() => selectedGameId && hostRef.current?.startGame(selectedGameId)}
         >
-          {selectedManifest ? `เริ่ม ${selectedManifest.titleTh} ▶` : 'เลือกเกมก่อนเริ่ม'}
+          {selectedManifest ? `ออกผจญภัย: ${selectedManifest.titleTh} ▶` : 'เลือกภารกิจก่อนเริ่ม'}
         </PixelButton>
-        {players.length < 1 && <p className="host-lobby__hint">รอผู้เล่นเข้าร่วมอย่างน้อย 1 คนก่อนเริ่มเกม</p>}
+        {players.length < 1 && <p className="host-lobby__hint">รอนักผจญภัยเข้าร่วมอย่างน้อย 1 คนก่อนเริ่ม</p>}
       </div>
     </div>
   );

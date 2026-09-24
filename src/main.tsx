@@ -8,8 +8,10 @@ import './core/ui/theme.css';
 import './core/ui/components.css';
 import { App } from './app/App';
 import { loadPixelLabOverrides } from './core/sprites/engine';
+import { applyStoredLargeTextPreference } from './core/ui/LargeTextToggle';
 
 loadPixelLabOverrides();
+applyStoredLargeTextPreference();
 
 const root = document.getElementById('app');
 if (root) render(<App />, root);

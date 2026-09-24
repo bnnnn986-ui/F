@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
 import { navigate } from './router';
 import { usePartyClientState } from './usePartyClientState';
-import { sendPartyIntent } from './partyClientStore';
+import { sendPartyIntent, joinParty, loadSavedSession } from './partyClientStore';
 import { loadGameModule } from '../games/registry';
 import type { GameModule } from '../games/types';
 import { PixelPanel } from '../core/ui/PixelPanel';
 import { PixelButton } from '../core/ui/PixelButton';
+import { D20Spinner } from '../core/ui/D20Spinner';
 import { PlayerLobby } from '../lobby/PlayerLobby';
 import { PartyScoreboard } from '../lobby/PartyScoreboard';
 
@@ -14,10 +15,22 @@ import { PartyScoreboard } from '../lobby/PartyScoreboard';
  * while `phase === 'lobby'`, or the active game's PlayerView while
  * `phase === 'in-game'`. Driven entirely by `partyClientStore`, so it
  * survives the host switching games without the player reconnecting.
+ *
+ * Reload resilience: if this screen mounts with no live connection but a
+ * saved session (room code + playerId) from before a reload, it silently
+ * reconnects to the same room/identity instead of asking for the code again.
  */
 export function PartyPlayScreen() {
   const state = usePartyClientState();
   const [activeModule, setActiveModule] = useState<GameModule | null>(null);
+  const [resumeFailed, setResumeFailed] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (state.status !== 'idle') return;
+    const saved = loadSavedSession();
+    if (!saved) return;
+    joinParty(saved.roomCode, saved.profile, saved.playerId, true).catch(() => setResumeFailed(saved.roomCode));
+  }, [state.status]);
 
   useEffect(() => {
     if (state.phase === 'in-game' && state.activeGameId) {
@@ -31,12 +44,24 @@ export function PartyPlayScreen() {
   }, [state.phase, state.activeGameId]);
 
   if (state.status === 'idle') {
+    if (resumeFailed) {
+      return (
+        <div className="screen-center">
+          <PixelPanel style={{ textAlign: 'center' }}>
+            <p>เชื่อมต่อกลับห้อง #{resumeFailed} ไม่สำเร็จ</p>
+            <PixelButton variant="primary" onClick={() => navigate(`/join/${resumeFailed}`)}>
+              ลองเข้าร่วมอีกครั้ง
+            </PixelButton>
+          </PixelPanel>
+        </div>
+      );
+    }
     return (
       <div className="screen-center">
         <PixelPanel style={{ textAlign: 'center' }}>
-          <p>คุณยังไม่ได้เข้าร่วมห้อง</p>
+          <p>คุณยังไม่ได้เข้าร่วมโรงเตี๊ยม</p>
           <PixelButton variant="primary" onClick={() => navigate('/join')}>
-            เข้าร่วมห้องด้วยรหัส
+            เข้าร่วมด้วยรหัส
           </PixelButton>
         </PixelPanel>
       </div>
@@ -47,7 +72,7 @@ export function PartyPlayScreen() {
     return (
       <div className="screen-center">
         <PixelPanel style={{ textAlign: 'center' }}>
-          <p>กำลังเชื่อมต่อ…</p>
+          <D20Spinner label={state.isResuming ? 'กำลังเชื่อมต่อกลับ…' : 'กำลังเชื่อมต่อ…'} />
         </PixelPanel>
       </div>
     );
@@ -58,7 +83,10 @@ export function PartyPlayScreen() {
       <div className="screen-center">
         <PixelPanel style={{ textAlign: 'center' }}>
           <p>{state.errorMessage}</p>
-          <PixelButton variant="primary" onClick={() => navigate('/')}>
+          <PixelButton variant="primary" onClick={() => navigate(`/join/${state.roomCode}`)}>
+            ลองเข้าร่วมอีกครั้ง
+          </PixelButton>
+          <PixelButton variant="secondary" onClick={() => navigate('/')}>
             กลับหน้าแรก
           </PixelButton>
         </PixelPanel>

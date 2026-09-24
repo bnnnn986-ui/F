@@ -38,7 +38,7 @@ export function HostLobby({
   return (
     <div className="host-lobby">
       <PixelPanel className="host-lobby__code-panel">
-        <p className="host-lobby__game-title">ห้องปาร์ตี้</p>
+        <p className="host-lobby__game-title">โรงเตี๊ยม</p>
         <div className="host-lobby__code-row">
           <div>
             <p className="host-lobby__code-label">รหัสห้อง</p>
@@ -60,10 +60,10 @@ export function HostLobby({
 
       <PixelPanel className="host-lobby__players">
         <div className="host-lobby__players-header">
-          <h2>ผู้เล่นในห้อง ({players.length})</h2>
+          <h2>นักผจญภัยในโรงเตี๊ยม ({players.length})</h2>
         </div>
         {players.length === 0 ? (
-          <p className="host-lobby__empty">ยังไม่มีผู้เล่น — สแกน QR หรือกรอกรหัสห้องเพื่อเข้าร่วม</p>
+          <p className="host-lobby__empty">ยังไม่มีนักผจญภัย — สแกน QR หรือกรอกรหัสห้องเพื่อเข้าร่วม</p>
         ) : (
           <ul className="host-lobby__grid">
             {players.map((p) => (
@@ -72,11 +72,14 @@ export function HostLobby({
                   type="button"
                   className="host-lobby__kick"
                   onClick={() => onKick(p.playerId)}
-                  title={`เชิญ ${p.name} ออกจากห้อง`}
-                  aria-label={`เชิญ ${p.name} ออกจากห้อง`}
+                  title={`เชิญ ${p.name} ออกจากโรงเตี๊ยม`}
+                  aria-label={`เชิญ ${p.name} ออกจากโรงเตี๊ยม`}
                 >
-                  <AvatarSprite avatarId={p.avatarId} size={56} animation="idle" pop />
-                  <span className="host-lobby__player-name">{p.name}</span>
+                  <AvatarSprite avatarId={p.avatarId} tint={p.tint} size={56} animation="idle" pop />
+                  <span className="host-lobby__player-name">
+                    {p.name}
+                    {p.isBot && <span className="npc-badge">NPC</span>}
+                  </span>
                   <span className="host-lobby__kick-x" aria-hidden="true">
                     ✕
                   </span>

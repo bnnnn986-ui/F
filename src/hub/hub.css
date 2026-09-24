@@ -7,6 +7,22 @@
 .hub-hero {
   text-align: center;
   padding: 1.5rem 0 1rem;
+  position: relative;
+}
+
+.hub-hero__banner {
+  position: absolute;
+  inset: 0;
+  top: 2.5rem;
+  height: 140px;
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  opacity: 0.35;
+  mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+  z-index: -1;
+  border-radius: var(--pp-radius);
 }
 
 .hub-hero__topbar {
@@ -17,9 +33,21 @@
 }
 
 .hub-hero__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hub-hero__d20 {
+  animation: pp-d20-roll 6s steps(8) infinite;
+}
+
+.hub-hero__logo-text {
   font-family: var(--pp-font-latin);
   font-weight: 700;
-  font-size: clamp(1.8rem, 7vw, 3.4rem);
+  font-size: clamp(1.6rem, 6.5vw, 3.2rem);
   letter-spacing: 0.04em;
   line-height: 1.1;
   display: flex;

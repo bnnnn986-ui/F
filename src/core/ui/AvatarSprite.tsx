@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { createFrameClock, drawSprite } from '../sprites/engine';
 import { getAvatar } from '../sprites/avatars';
+import { getCharacter } from '../sprites/heroes';
+import { getRecoloredDataUrl } from '../sprites/recolor';
 
 export interface AvatarSpriteProps {
   avatarId: string;
+  /** Outfit hue tint, 0 = original PNG colours. See core/sprites/recolor.ts. */
+  tint?: number;
   size?: number; // rendered box size in px
   animation?: 'idle' | 'run' | 'none';
   facing?: 'left' | 'right';
@@ -12,21 +16,36 @@ export interface AvatarSpriteProps {
 }
 
 /**
- * Draws a party avatar. Primary art is a real PixelLab PNG (side-view,
- * facing right) from `public/assets/pixellab/avatars/<id>.png`, animated
- * with a pure-CSS bob (idle) / faster bob+tilt (run) so we don't need a
- * sprite sheet. If the PNG is missing (e.g. an id PixelLab hasn't drawn
- * yet), we fall back to the code-drawn canvas critter from `sprites/avatars`.
+ * Draws a party character (hero class or polymorph critter). Primary art
+ * is a real PixelLab PNG, recoloured client-side by `tint` (see
+ * `core/sprites/recolor.ts`), animated with a pure-CSS bob (idle) / faster
+ * bob+tilt (run). Falls back to the code-drawn canvas critter from
+ * `sprites/avatars` if the PNG is missing or fails to load.
  */
 export function AvatarSprite({
   avatarId,
+  tint = 0,
   size = 64,
   animation = 'idle',
   facing = 'right',
   pop,
   className = '',
 }: AvatarSpriteProps) {
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setImageFailed(false);
+    const character = getCharacter(avatarId);
+    getRecoloredDataUrl(character.pngPath, tint)
+      .then((url) => !cancelled && setDataUrl(url))
+      .catch(() => !cancelled && setImageFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [avatarId, tint]);
+
   const wrapperClasses = ['pixel-avatar', pop ? 'pixel-avatar--pop' : '', className].filter(Boolean).join(' ');
   const flip = facing === 'left';
 
@@ -37,15 +56,17 @@ export function AvatarSprite({
         className={wrapperClasses}
         style={{ width: size, height: size, transform: flip ? 'scaleX(-1)' : undefined }}
       >
-        <img
-          src={`assets/pixellab/avatars/${avatarId}.png`}
-          width={size}
-          height={size}
-          alt=""
-          draggable={false}
-          className={animClass}
-          onError={() => setImageFailed(true)}
-        />
+        {dataUrl && (
+          <img
+            src={dataUrl}
+            width={size}
+            height={size}
+            alt=""
+            draggable={false}
+            className={animClass}
+            onError={() => setImageFailed(true)}
+          />
+        )}
       </div>
     );
   }
