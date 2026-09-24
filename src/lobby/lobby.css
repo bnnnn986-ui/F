@@ -19,6 +19,13 @@
   touch-action: manipulation;
 }
 
+/* Player-side in-game screen: start from the top (no dead space above the question), primary
+   action naturally lands in the thumb zone since the answer tiles fill the rest of the height. */
+.screen-center--game {
+  justify-content: flex-start;
+  padding-top: calc(var(--pp-space-4) + env(safe-area-inset-top, 0px));
+}
+
 .player-form h2 {
   margin-top: 0.25rem;
 }
@@ -141,7 +148,7 @@
 }
 
 .host-lobby {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 1rem;
   display: flex;
@@ -149,21 +156,27 @@
   gap: 1rem;
 }
 
-.host-lobby__game-title {
-  font-family: var(--pp-font-latin);
-  text-transform: uppercase;
-  font-size: 0.85rem;
-  opacity: 0.6;
-  margin: 0 0 0.5rem;
+/* ---------- Kahoot-style host lobby header ---------- */
+.host-lobby__code-panel {
+  text-align: center;
 }
+.host-lobby__join-at {
+  font-size: var(--pp-text-lg);
+  margin: 0 0 var(--pp-space-3);
+  opacity: 0.9;
+}
+.host-lobby__join-at .pixel-num { color: var(--pp-accent); letter-spacing: 0.02em; }
 
 .host-lobby__code-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 1.5rem;
+  gap: var(--pp-space-6);
   flex-wrap: wrap;
+  margin-bottom: var(--pp-space-4);
 }
+
+.host-lobby__code-col { text-align: center; }
 
 .host-lobby__code-label {
   margin: 0;
@@ -172,20 +185,38 @@
 }
 
 .host-lobby__code {
-  font-family: var(--pp-font-num);
   font-variant-numeric: tabular-nums;
-  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-size: clamp(3rem, 10vw, 7rem);
+  line-height: 1;
   font-weight: 700;
   letter-spacing: 0.12em;
-  margin: 0 0 0.5rem;
+  margin: 0;
   color: var(--pp-primary);
 }
 
-.host-lobby__actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+/* QR sized to match the code block's height, tap to enlarge fullscreen. */
+.host-lobby__qr-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  touch-action: manipulation;
 }
+.host-lobby__qr-trigger:focus-visible { outline: 3px dashed var(--pp-gold-glow); outline-offset: 3px; }
+.host-lobby__qr-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(10, 10, 20, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pp-space-4);
+  cursor: pointer;
+}
+.host-lobby__qr-overlay-hint { color: var(--pp-paper); opacity: 0.8; margin: 0; }
 
 .host-lobby__players-header {
   display: flex;

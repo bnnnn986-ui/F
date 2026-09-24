@@ -163,7 +163,7 @@ test('host control bar: "จบเกม" -> "ไปที่โพเดีย�
 
   // Podium shows up with the bot's (possibly 0) tallied score, still inside the round.
   await expect(hostPage.getByText('ตำนานประจำดันเจี้ยน')).toBeVisible({ timeout: 15_000 });
-  await expect(hostPage.locator('.quiz-podium__full-list li')).toHaveCount(2);
+  await expect(hostPage.locator('.quiz-podium__full-list tbody tr')).toHaveCount(2);
 
   // Back to the tavern — the round's score feeds the party leaderboard.
   await hostPage.getByRole('button', { name: /กลับโรงเตี๊ยม/ }).click();

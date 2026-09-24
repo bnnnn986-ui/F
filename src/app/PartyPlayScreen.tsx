@@ -100,7 +100,7 @@ export function PartyPlayScreen() {
   if (state.phase === 'in-game' && activeModule) {
     const PlayerView = activeModule.PlayerView;
     return (
-      <div className="screen-center">
+      <div className="screen-center screen-center--game">
         <PlayerView view={state.gameStatePayload} sendIntent={sendPartyIntent} />
       </div>
     );
