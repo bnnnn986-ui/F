@@ -196,6 +196,36 @@
   to { transform: scale(1); opacity: 1; }
 }
 
+/* ---------- Pixel shapes & chevrons (CSS-drawn, no font glyphs) ---------- */
+.pp-shape {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  flex: none;
+}
+.pp-shape--square { background: currentColor; }
+.pp-shape--circle { background: currentColor; border-radius: 50%; }
+.pp-shape--diamond { background: currentColor; transform: rotate(45deg); width: 0.65em; height: 0.65em; }
+.pp-shape--triangle {
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-left: 0.45em solid transparent;
+  border-right: 0.45em solid transparent;
+  border-bottom: 0.8em solid currentColor;
+}
+
+.pp-chevron {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border: 0.4em solid transparent;
+}
+.pp-chevron--up { border-bottom-color: currentColor; border-top-width: 0; }
+.pp-chevron--down { border-top-color: currentColor; border-bottom-width: 0; }
+.pp-chevron--left { border-right-color: currentColor; border-left-width: 0; }
+.pp-chevron--right { border-left-color: currentColor; border-right-width: 0; }
+
 /* ---------- Icon ---------- */
 .pp-icon {
   display: inline-block;

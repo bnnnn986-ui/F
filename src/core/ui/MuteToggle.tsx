@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { isMuted, onMuteChange, toggleMuted } from '../audio/audio';
+import { Icon, MutedIcon } from './Icon';
 
 export function MuteToggle() {
   const [muted, setMuted] = useState(isMuted());
@@ -12,7 +13,7 @@ export function MuteToggle() {
       aria-pressed={muted}
       onClick={() => toggleMuted()}
     >
-      {muted ? '🔇' : '🔊'}
+      {muted ? <MutedIcon /> : <Icon name="horn" />}
     </button>
   );
 }

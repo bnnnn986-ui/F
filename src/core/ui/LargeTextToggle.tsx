@@ -27,7 +27,9 @@ export function LargeTextToggle() {
         setItem(KEY, next ? '1' : '0');
       }}
     >
-      {on ? '🔎' : '🔤'}
+      <span className="pixel-num" aria-hidden="true" style={{ fontSize: on ? '1.3em' : '1em' }}>
+        A
+      </span>
     </button>
   );
 }
