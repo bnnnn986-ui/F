@@ -1,6 +1,6 @@
 import { render } from 'preact';
-import '@fontsource/pixelify-sans/400.css';
-import '@fontsource/pixelify-sans/700.css';
+import '@fontsource/pixelify-sans/700.css'; // decorative titles only (see .pixel-title)
+import '@fontsource/jersey-10';
 import '@fontsource/kanit/400.css';
 import '@fontsource/kanit/600.css';
 import '@fontsource/kanit/700.css';

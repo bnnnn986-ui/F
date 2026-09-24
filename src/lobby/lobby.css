@@ -161,7 +161,8 @@
 }
 
 .host-lobby__code {
-  font-family: var(--pp-font-latin);
+  font-family: var(--pp-font-num);
+  font-variant-numeric: tabular-nums;
   font-size: clamp(2.5rem, 8vw, 4rem);
   font-weight: 700;
   letter-spacing: 0.12em;

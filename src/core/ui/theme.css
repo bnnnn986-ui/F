@@ -33,6 +33,10 @@
      else, including every heading, defaults to Kanit. */
   --pp-font-latin: 'Pixelify Sans', 'Kanit', system-ui, sans-serif;
   --pp-font-thai: 'Kanit', 'Pixelify Sans', system-ui, sans-serif;
+  /* Numbers/codes: Jersey 10 — clearer digit shapes than Pixelify Sans at
+     both small (14px UI) and huge (96px room-code/score) sizes. See
+     shots/phase4/font-compare.png for the comparison this was picked from. */
+  --pp-font-num: 'Jersey 10', 'Pixelify Sans', monospace;
 
   color-scheme: dark;
 }
@@ -73,8 +77,14 @@ h1, h2, h3 {
 }
 
 /* Latin/number-only display text (logo, room codes, big score numbers). */
-.pixel-title, .pixel-num {
+.pixel-title {
   font-family: var(--pp-font-latin);
+}
+
+/* Room codes, scores, timers — anything numeric/Latin that needs to be read fast. */
+.pixel-num {
+  font-family: var(--pp-font-num);
+  font-variant-numeric: tabular-nums;
 }
 
 button, input {
