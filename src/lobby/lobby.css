@@ -2,11 +2,21 @@
   max-width: 640px;
   margin: 0 auto;
   padding: 1rem;
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 1rem;
+}
+
+/* Full-viewport host game screens (projector-first) — no side max-width clamp; overscroll disabled during play. */
+.game-host-screen {
+  max-width: none;
+  overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 .player-form h2 {

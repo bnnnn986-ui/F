@@ -62,6 +62,16 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
   // Keep the screen awake through the whole party (lobby + any active game).
   useWakeLock(openState === 'open');
 
+  // Create-room flow: when "โฮสต์ร่วมเล่นด้วย" defaults ON (narrow viewport, no explicit choice yet),
+  // ask for name+avatar right away instead of waiting for the host to notice the toggle.
+  const promptedHostPlaysRef = useRef(false);
+  useEffect(() => {
+    if (openState === 'open' && hostPlays && !localPlayerId && !promptedHostPlaysRef.current) {
+      promptedHostPlaysRef.current = true;
+      setHostPlaysFormOpen(true);
+    }
+  }, [openState, hostPlays, localPlayerId]);
+
   function toggleHostPlays(on: boolean) {
     saveHostPlaysChoice(on);
     if (on) {

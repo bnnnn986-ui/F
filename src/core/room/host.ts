@@ -306,7 +306,9 @@ export class RoomHost extends Emitter<RoomHostEvents> {
       avatarId,
       tint,
       connected: true,
-      isHost: true,
+      // RoomPlayer.isHost is a wire-protocol field always `false` (see protocol.ts) — this player is
+      // host-controlled (no transport, driven by sendLocalIntent), tracked separately via localPlayerId.
+      isHost: false,
       isBot: false,
       score: 0,
       joinedAt: Date.now(),

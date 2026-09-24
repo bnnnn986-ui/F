@@ -342,4 +342,43 @@ describe('RoomHost + RoomClient over LocalTransport', () => {
       expect(host.getPartyTeamScores()).toEqual([{ teamId, name: expect.any(String), color: expect.any(String), total: 42 }]);
     });
   });
+
+  describe('"โฮสต์ร่วมเล่นด้วย" — the host joining their own room as a real player', () => {
+    it('adds the host as a real (non-bot) player and lets them send intents like any other player', async () => {
+      const { host } = makeHost();
+      await host.open();
+      await host.startGame('fake-game');
+
+      const player = host.addLocalPlayer('ผู้คุมเกม', 'fighter', 0);
+      expect(player.isBot).toBe(false);
+      expect(host.getLocalPlayerId()).toBe(player.playerId);
+      expect(host.getPlayers().some((p) => p.playerId === player.playerId)).toBe(true);
+
+      host.sendLocalIntent({ type: 'answer', choiceIndex: 1 });
+      expect(onIntent).toHaveBeenCalledWith(player.playerId, { type: 'answer', choiceIndex: 1 });
+
+      expect(host.getLocalPlayerView()).toEqual({ ok: true });
+
+      host.removeLocalPlayer();
+      expect(host.getLocalPlayerId()).toBeNull();
+      expect(host.getPlayers().some((p) => p.playerId === player.playerId)).toBe(false);
+    });
+
+    it('getLocalPlayerView() calls the SAME GameHost.getPlayerView(playerId) every remote phone gets', async () => {
+      // getLocalPlayerView is a thin pass-through to the mounted game's own per-player projection —
+      // quiz-race's projection (buildPlayerView) is separately unit-tested to never include
+      // `correctIndex` before reveal (see logic/reducer.test.ts, "view layer: … never leaks the
+      // correct answer"), so routing the host's own answers through that exact function is what makes
+      // the host-plays embedded PlayerView safe, with no extra leak surface.
+      const { host } = makeHost();
+      await host.open();
+      await host.startGame('fake-game');
+      const player = host.addLocalPlayer('ผู้คุมเกม', 'fighter', 0);
+      const getPlayerViewSpy = vi.spyOn(fakeGameHost, 'getPlayerView');
+
+      host.getLocalPlayerView();
+
+      expect(getPlayerViewSpy).toHaveBeenCalledWith(player.playerId);
+    });
+  });
 });

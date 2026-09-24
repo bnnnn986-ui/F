@@ -235,9 +235,11 @@ function RevealHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => void 
             );
           })}
         </div>
-        <NextControl deadlineAt={v.deadlineAt} phaseTotalMs={v.phaseTotalMs} onNext={onNext}>
-          ดูอันดับ <Chevron direction="right" />
-        </NextControl>
+        <div className="quiz-next-row">
+          <NextControl deadlineAt={v.deadlineAt} phaseTotalMs={v.phaseTotalMs} onNext={onNext}>
+            ดูอันดับ <Chevron direction="right" />
+          </NextControl>
+        </div>
       </PixelPanel>
       {v.teamMode && v.teamScores ? (
         <TeamRaceTrack teamScores={v.teamScores} runners={v.runners} maxScore={maxPossibleScoreFromView(v)} />
@@ -268,13 +270,15 @@ function LeaderboardHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => 
           </li>
         ))}
       </ol>
-      <NextControl deadlineAt={v.deadlineAt} phaseTotalMs={v.phaseTotalMs} onNext={onNext}>
-        {isLast ? (
-          <>ดูผลสรุป <Chevron direction="right" /></>
-        ) : (
-          <>ข้อถัดไป <Chevron direction="right" /></>
-        )}
-      </NextControl>
+      <div className="quiz-next-row quiz-next-row--center">
+        <NextControl deadlineAt={v.deadlineAt} phaseTotalMs={v.phaseTotalMs} onNext={onNext}>
+          {isLast ? (
+            <>ดูผลสรุป <Chevron direction="right" /></>
+          ) : (
+            <>ข้อถัดไป <Chevron direction="right" /></>
+          )}
+        </NextControl>
+      </div>
     </PixelPanel>
   );
 }
@@ -359,29 +363,52 @@ function PodiumHost({
       {v.podiumStats && (
         <div className="quiz-podium__stats">
           {v.podiumStats.mostAccurate && (
-            <PixelPanel dark>
-              <Icon name="target" className="pp-icon--sm" /> แม่นยำที่สุด: {v.podiumStats.mostAccurate.name} ({v.podiumStats.mostAccurate.correctCount}/{v.podiumStats.mostAccurate.totalQuestions})
+            <PixelPanel dark className="quiz-podium__stat-card">
+              <Icon name="target" className="pp-icon--md" />
+              <p className="quiz-podium__stat-value">{v.podiumStats.mostAccurate.name}</p>
+              <p className="quiz-podium__stat-label">
+                แม่นยำที่สุด ({v.podiumStats.mostAccurate.correctCount}/{v.podiumStats.mostAccurate.totalQuestions})
+              </p>
             </PixelPanel>
           )}
           {v.podiumStats.fastest && (
-            <PixelPanel dark><Icon name="lightning" className="pp-icon--sm" /> ตอบไวที่สุด: {v.podiumStats.fastest.name}</PixelPanel>
+            <PixelPanel dark className="quiz-podium__stat-card">
+              <Icon name="lightning" className="pp-icon--md" />
+              <p className="quiz-podium__stat-value">{v.podiumStats.fastest.name}</p>
+              <p className="quiz-podium__stat-label">ตอบไวที่สุด</p>
+            </PixelPanel>
           )}
           {v.podiumStats.longestStreak && (
-            <PixelPanel dark>
-              <Icon name="flame" className="pp-icon--sm" /> สตรีคยาวที่สุด: {v.podiumStats.longestStreak.name} ({v.podiumStats.longestStreak.streak})
+            <PixelPanel dark className="quiz-podium__stat-card">
+              <Icon name="flame" className="pp-icon--md" />
+              <p className="quiz-podium__stat-value">{v.podiumStats.longestStreak.name}</p>
+              <p className="quiz-podium__stat-label">สตรีคยาวที่สุด ({v.podiumStats.longestStreak.streak})</p>
             </PixelPanel>
           )}
         </div>
       )}
 
-      <ol className="quiz-podium__full-list">
-        {v.leaderboard.map((e) => (
-          <li key={e.player.playerId}>
-            #{e.rank} {e.player.name}
-            {e.player.isBot && <span className="npc-badge">NPC</span>} — {e.player.score}
-          </li>
-        ))}
-      </ol>
+      <table className="quiz-podium__full-list">
+        <thead>
+          <tr>
+            <th>อันดับ</th>
+            <th>นักผจญภัย</th>
+            <th>คะแนน</th>
+          </tr>
+        </thead>
+        <tbody>
+          {v.leaderboard.map((e) => (
+            <tr key={e.player.playerId}>
+              <td>#{e.rank}</td>
+              <td>
+                {e.player.name}
+                {e.player.isBot && <span className="npc-badge">NPC</span>}
+              </td>
+              <td className="pixel-num">{e.player.score}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <div className="host-actions-row">
         <PixelButton variant="secondary" onClick={() => setShowReport(true)}>
@@ -390,7 +417,7 @@ function PodiumHost({
         <PixelButton variant="secondary" onClick={onRestart}>
           <Icon name="replay" className="pp-icon--md" /> เล่นอีกรอบ
         </PixelButton>
-        <PixelButton variant="primary" big onClick={onExit}>
+        <PixelButton variant="primary" onClick={onExit}>
           <Icon name="home" className="pp-icon--md" /> กลับโรงเตี๊ยม
         </PixelButton>
       </div>
