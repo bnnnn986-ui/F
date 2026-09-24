@@ -7,7 +7,7 @@ import { Chevron } from '../../../core/ui/PixelShape';
 import { QuizEditor } from './Editor';
 import type { QuizSetup } from '../setupConfig';
 import type { BotDifficulty } from '../logic/bots';
-import type { QuizHostAction } from '../index';
+import { defaultAutoPlay, type QuizHostAction } from '../index';
 
 const QUESTION_COUNTS: Array<number | 'all'> = [5, 10, 15, 'all'];
 const SECOND_OPTIONS = [10, 20, 30];
@@ -97,6 +97,36 @@ export function SetupPanel({
           />
           เวลาเพิ่มพิเศษ (x1.5) — โหมดช่วยเหลือ
         </label>
+      </div>
+
+      <div className="quiz-setup__section">
+        <p className="quiz-setup__label">เดินเกมอัตโนมัติ</p>
+        <div className="quiz-setup__chip-row">
+          <button
+            type="button"
+            className={`quiz-setup__chip ${setup.autoPlay === null ? 'is-active' : ''}`}
+            onClick={() => configure({ autoPlay: null })}
+          >
+            ค่าเริ่มต้น ({defaultAutoPlay() ? 'เปิด' : 'ปิด'})
+          </button>
+          <button
+            type="button"
+            className={`quiz-setup__chip ${setup.autoPlay === true ? 'is-active' : ''}`}
+            onClick={() => configure({ autoPlay: true })}
+          >
+            เปิด
+          </button>
+          <button
+            type="button"
+            className={`quiz-setup__chip ${setup.autoPlay === false ? 'is-active' : ''}`}
+            onClick={() => configure({ autoPlay: false })}
+          >
+            ปิด
+          </button>
+        </div>
+        <p className="quiz-setup__hint">
+          เมื่อเปิด: หน้าจอสรุปคำตอบและอันดับจะไปต่อเองเมื่อเวลาหมด (ยังกดถัดไปก่อนได้เสมอ)
+        </p>
       </div>
 
       <div className="quiz-setup__section">

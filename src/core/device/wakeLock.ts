@@ -1,17 +1,5 @@
 import { useEffect, useRef } from 'preact/hooks';
 
-interface WakeLockSentinelLike {
-  released: boolean;
-  release: () => Promise<void>;
-  addEventListener: (type: 'release', listener: () => void) => void;
-}
-
-interface NavigatorWithWakeLock extends Navigator {
-  wakeLock?: {
-    request: (type: 'screen') => Promise<WakeLockSentinelLike>;
-  };
-}
-
 /**
  * Keeps the screen awake while `active` is true (host running a game,
  * player in the lobby/game) — re-acquires automatically on
@@ -21,18 +9,17 @@ interface NavigatorWithWakeLock extends Navigator {
  * many browsers over insecure origins) — never throws.
  */
 export function useWakeLock(active: boolean): void {
-  const sentinelRef = useRef<WakeLockSentinelLike | null>(null);
+  const sentinelRef = useRef<WakeLockSentinel | null>(null);
 
   useEffect(() => {
     if (!active) return undefined;
-    const nav = navigator as NavigatorWithWakeLock;
-    if (!nav.wakeLock) return undefined;
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return undefined;
 
     let cancelled = false;
 
     async function acquire() {
       try {
-        const sentinel = await nav.wakeLock!.request('screen');
+        const sentinel = await navigator.wakeLock.request('screen');
         if (cancelled) {
           sentinel.release().catch(() => undefined);
           return;

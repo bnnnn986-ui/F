@@ -19,7 +19,8 @@ const PLAYERS = [
 function started() {
   let s = createInitialState(CONFIG, Q, PLAYERS);
   s = dungeonDashReducer(s, { type: 'start', now: 0 });
-  s = dungeonDashReducer(s, { type: 'tick', now: 3000 });
+  s = dungeonDashReducer(s, { type: 'tick', now: 3000 }); // countdown -> read
+  s = dungeonDashReducer(s, { type: 'tick', now: 6000 }); // read -> question
   return s;
 }
 

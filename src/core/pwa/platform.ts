@@ -15,10 +15,12 @@ export function isStandaloneDisplay(win: Pick<Window, 'matchMedia' | 'navigator'
   }
 }
 
-function isIosSafari(ua: string): boolean {
-  const isIosDevice = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && 'ontouchend' in document);
-  const isSafari = /safari/i.test(ua) && !/crios|fxios|edgios|opios/i.test(ua);
-  return isIosDevice && isSafari;
+function isIosDevice(ua: string): boolean {
+  return /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && typeof document !== 'undefined' && 'ontouchend' in document);
+}
+
+function isSafariUa(ua: string): boolean {
+  return /safari/i.test(ua) && !/crios|fxios|edgios|opios/i.test(ua);
 }
 
 /**
@@ -36,7 +38,12 @@ export function detectInstallPlatform(
   ua: string = window.navigator.userAgent,
 ): InstallPlatform {
   if (isStandaloneDisplay(win)) return 'standalone';
-  if (isIosSafari(ua)) return 'ios-safari';
-  if ('onbeforeinstallprompt' in win || /chrome|chromium|crios|edg\//i.test(ua)) return 'promptable';
+  // Checked by UA first, ahead of feature-detecting `onbeforeinstallprompt`:
+  // all iOS browsers (Safari, CriOS, FxiOS, ...) run on WebKit and never
+  // actually fire that event, even though some non-WebKit test harnesses
+  // impersonating an iOS UA still expose the property on `window`. Only
+  // Safari itself has an "Add to Home Screen" path worth walking through.
+  if (isIosDevice(ua)) return isSafariUa(ua) ? 'ios-safari' : 'unsupported';
+  if ('onbeforeinstallprompt' in win || /chrome|chromium|edg\//i.test(ua)) return 'promptable';
   return 'unsupported';
 }

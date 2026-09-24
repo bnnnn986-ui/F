@@ -18,13 +18,16 @@ const PLAYERS = [
 function playedState() {
   let s = createInitialState(CONFIG, Q, PLAYERS);
   s = dungeonDashReducer(s, { type: 'start', now: 0 });
-  s = dungeonDashReducer(s, { type: 'tick', now: 3000 });
-  s = dungeonDashReducer(s, { type: 'answer', playerId: 'p1', choiceIndex: 0, now: 3100 }); // correct
-  s = dungeonDashReducer(s, { type: 'answer', playerId: 'p2', choiceIndex: 1, now: 3200 }); // wrong (q1 correct=0)
-  s = dungeonDashReducer(s, { type: 'next', now: 20000 });
-  s = dungeonDashReducer(s, { type: 'answer', playerId: 'p1', choiceIndex: 1, now: 20100 }); // correct
+  s = dungeonDashReducer(s, { type: 'tick', now: 3000 }); // countdown -> read
+  s = dungeonDashReducer(s, { type: 'tick', now: 6000 }); // read -> question
+  s = dungeonDashReducer(s, { type: 'answer', playerId: 'p1', choiceIndex: 0, now: 6100 }); // correct
+  s = dungeonDashReducer(s, { type: 'answer', playerId: 'p2', choiceIndex: 1, now: 6200 }); // wrong (q1 correct=0)
+  s = dungeonDashReducer(s, { type: 'next', now: 20000 }); // reveal -> leaderboard
+  s = dungeonDashReducer(s, { type: 'next', now: 20100 }); // leaderboard -> read
+  s = dungeonDashReducer(s, { type: 'skip', now: 20200 }); // read -> question (questionStartedAt = 20200)
+  s = dungeonDashReducer(s, { type: 'answer', playerId: 'p1', choiceIndex: 1, now: 20300 }); // correct
   // p2 doesn't answer q2
-  s = dungeonDashReducer(s, { type: 'tick', now: 20000 + CONFIG.secondsPerQuestion * 1000 });
+  s = dungeonDashReducer(s, { type: 'tick', now: 20200 + CONFIG.secondsPerQuestion * 1000 });
   return s;
 }
 

@@ -43,12 +43,35 @@ export function QuizRacePlayerView({ view, sendIntent }: { view: unknown; sendIn
     );
   }
 
+  if (v.phase === 'read') {
+    return (
+      <PixelPanel style={{ textAlign: 'center' }}>
+        <div className="quiz-question-host__meta" style={{ justifyContent: 'center' }}>
+          <span>ข้อ {v.questionIndex + 1}/{v.totalQuestions}</span>
+        </div>
+        <h2 className="quiz-player-question__text">{v.question?.text}</h2>
+        <p>อ่านโจทย์ให้ดี… คำตอบกำลังจะมา</p>
+      </PixelPanel>
+    );
+  }
+
   if (v.phase === 'question') {
     return <QuestionPlayer v={v} onAnswer={(choiceIndex) => send({ type: 'answer', choiceIndex })} />;
   }
 
   if (v.phase === 'reveal') {
     return <ResultPlayer v={v} />;
+  }
+
+  if (v.phase === 'leaderboard') {
+    return (
+      <PixelPanel style={{ textAlign: 'center' }}>
+        <Icon name="star" scale={2} />
+        <h2>อันดับ {v.rank ?? '-'} จาก {v.totalPlayers}</h2>
+        <p className="quiz-result__score">คะแนนรวม {v.score}</p>
+        <p>รอผู้คุมเกมไปข้อถัดไป…</p>
+      </PixelPanel>
+    );
   }
 
   if (v.phase === 'podium') {
@@ -135,6 +158,11 @@ function ResultPlayer({ v }: { v: QuizPlayerViewPayload }) {
         อันดับ {v.rank ?? '-'} จาก {v.totalPlayers}
       </p>
       <p className="quiz-result__score">คะแนนรวม {v.score}</p>
+      {v.result && v.result.majorityChoiceIndex !== null && v.question && (
+        <p className="quiz-result__majority">
+          คนส่วนใหญ่ตอบ "{v.question.choices[v.result.majorityChoiceIndex]}" ({v.result.majorityPercent}%)
+        </p>
+      )}
     </PixelPanel>
   );
 }

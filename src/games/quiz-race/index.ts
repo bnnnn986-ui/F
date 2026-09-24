@@ -40,6 +40,11 @@ function effectiveAutoPlay(setup: QuizSetup): boolean {
   return setup.autoPlay ?? defaultAutoPlay();
 }
 
+/** e2e hook: shrink the read/reveal/leaderboard auto-timers along with the countdown under `?fast=1`. */
+function phaseDurationsForMode() {
+  return isFastTestMode() ? { readMs: 300, revealAutoMs: 500, leaderboardAutoMs: 500 } : undefined;
+}
+
 export type QuizPlayerIntent = { type: 'answer'; choiceIndex: number };
 
 export interface QuizHostViewPayload extends HostViewPayload {
@@ -106,7 +111,7 @@ class DungeonDashGameHost implements GameHost<unknown> {
       const { questions, config, packNameTh } = buildQuestions(this.setup);
       this.packNameTh = packNameTh;
       const players = this.playersForReducer();
-      this.state = createInitialState(config, questions, players, effectiveAutoPlay(this.setup));
+      this.state = createInitialState(config, questions, players, effectiveAutoPlay(this.setup), phaseDurationsForMode());
     }
   }
 
@@ -151,7 +156,7 @@ class DungeonDashGameHost implements GameHost<unknown> {
         this.setup = { ...this.setup, ...a.setup, config: { ...this.setup.config, ...a.setup.config } };
         const { questions, config, packNameTh } = buildQuestions(this.setup);
         this.packNameTh = packNameTh;
-        this.state = createInitialState(config, questions, this.playersForReducer(), effectiveAutoPlay(this.setup));
+        this.state = createInitialState(config, questions, this.playersForReducer(), effectiveAutoPlay(this.setup), phaseDurationsForMode());
         break;
       }
       case 'start':
@@ -164,7 +169,7 @@ class DungeonDashGameHost implements GameHost<unknown> {
       case 'restart': {
         const { questions, config, packNameTh } = buildQuestions(this.setup);
         this.packNameTh = packNameTh;
-        this.state = createInitialState(config, questions, this.playersForReducer(), effectiveAutoPlay(this.setup));
+        this.state = createInitialState(config, questions, this.playersForReducer(), effectiveAutoPlay(this.setup), phaseDurationsForMode());
         this.lastScheduledQuestionIndex = -1;
         this.botSchedule.clear();
         this.ended = false;

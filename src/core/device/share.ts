@@ -1,9 +1,5 @@
 import { showToast } from '../ui/toast';
 
-interface NavigatorWithShare extends Navigator {
-  share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
-}
-
 /**
  * Shares the room join link via the native Web Share sheet
  * (Android/iOS/some desktop browsers). Falls back to copying the link to
@@ -12,11 +8,10 @@ interface NavigatorWithShare extends Navigator {
  * cancellation.
  */
 export async function shareJoinLink(url: string, roomCode?: string): Promise<void> {
-  const nav = navigator as NavigatorWithShare;
   const text = roomCode ? `มาร่วมโรงเตี๊ยม รหัสห้อง ${roomCode}` : 'มาร่วมโรงเตี๊ยมกัน';
-  if (nav.share) {
+  if (typeof navigator !== 'undefined' && navigator.share) {
     try {
-      await nav.share({ title: 'Pixel Tavern', text, url });
+      await navigator.share({ title: 'Pixel Tavern', text, url });
       return;
     } catch (err) {
       // AbortError: the user dismissed the share sheet — not an error, just stop.

@@ -107,6 +107,23 @@ function computePodiumStats(state: DungeonDashState): PodiumStats {
   return { mostAccurate, fastest, longestStreak };
 }
 
+function phaseTotalMs(state: DungeonDashState): number | null {
+  switch (state.phase) {
+    case 'countdown':
+      return null; // countdown length isn't a game-design constant a control needs to show a ring for
+    case 'read':
+      return state.readMs;
+    case 'question':
+      return state.config.secondsPerQuestion * 1000;
+    case 'reveal':
+      return state.autoPlay ? state.revealAutoMs : null;
+    case 'leaderboard':
+      return state.autoPlay ? state.leaderboardAutoMs : null;
+    default:
+      return null;
+  }
+}
+
 export interface HostViewPayload {
   phase: DungeonDashState['phase'];
   questionIndex: number;
@@ -116,6 +133,8 @@ export interface HostViewPayload {
   revealCorrectIndex: number | null;
   timeLimitMs: number;
   deadlineAt: number | null;
+  /** Total duration (ms) of whatever timed phase is currently running — for a draining countdown ring. */
+  phaseTotalMs: number | null;
   /** True while the host has paused the game (timers frozen). */
   paused: boolean;
   /** "เดินเกมอัตโนมัติ" — whether reveal/leaderboard auto-advance without the host pressing a button. */
@@ -144,6 +163,7 @@ export function buildHostView(state: DungeonDashState): HostViewPayload {
     revealCorrectIndex: answerRevealed ? (q?.correctIndex ?? null) : null,
     timeLimitMs: state.config.secondsPerQuestion * 1000,
     deadlineAt: state.phaseEndsAt,
+    phaseTotalMs: phaseTotalMs(state),
     paused: state.pausedAt !== null,
     autoPlay: state.autoPlay,
     answeredCount,

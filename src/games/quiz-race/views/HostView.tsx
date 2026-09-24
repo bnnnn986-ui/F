@@ -1,10 +1,11 @@
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import confetti from 'canvas-confetti';
 import { PixelPanel } from '../../../core/ui/PixelPanel';
 import { PixelButton } from '../../../core/ui/PixelButton';
 import { AvatarSprite } from '../../../core/ui/AvatarSprite';
 import { ItemSprite } from '../../../core/ui/ItemSprite';
-import { TimerBar } from '../../../core/ui/Timer';
+import { TimerBar, CountdownRing } from '../../../core/ui/Timer';
 import { playSound } from '../../../core/audio/audio';
 import { RaceTrack } from './RaceTrack';
 import { TeamRaceTrack } from './TeamRaceTrack';
@@ -46,12 +47,20 @@ export function QuizRaceHostView({
     return <CountdownScreen deadlineAt={v.deadlineAt} />;
   }
 
+  if (v.phase === 'read') {
+    return <ReadHost v={v} />;
+  }
+
   if (v.phase === 'question') {
     return <QuestionHost v={v} />;
   }
 
   if (v.phase === 'reveal') {
     return <RevealHost v={v} onNext={() => act({ type: 'next' })} />;
+  }
+
+  if (v.phase === 'leaderboard') {
+    return <LeaderboardHost v={v} onNext={() => act({ type: 'next' })} />;
   }
 
   if (v.phase === 'podium') {
@@ -96,6 +105,52 @@ function useCountdownSeconds(deadlineAt: number | null, timeLimitMs: number) {
   return { remainingMs, ratio: timeLimitMs > 0 ? remainingMs / timeLimitMs : 0 };
 }
 
+/** Read phase: question text only, answer tiles stay hidden for a beat before answering opens. */
+function ReadHost({ v }: { v: QuizHostViewPayload }) {
+  return (
+    <div className="quiz-question-host">
+      <PixelPanel className="quiz-question-host__card">
+        <div className="quiz-question-host__meta">
+          <span>
+            ข้อ {v.questionIndex + 1}/{v.totalQuestions}
+          </span>
+        </div>
+        <h2 className="quiz-question-host__text">{v.question?.text}</h2>
+        <p className="quiz-setup__hint">เตรียมตัวตอบ…</p>
+      </PixelPanel>
+    </div>
+  );
+}
+
+/**
+ * The host's "ถัดไป" control: a plain button when the host is driving manually, or (auto-play)
+ * a draining countdown ring around the button that can still be pressed early to skip ahead.
+ */
+function NextControl({ deadlineAt, phaseTotalMs, onNext, children }: { deadlineAt: number | null; phaseTotalMs: number | null; onNext: () => void; children: ComponentChildren }) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!deadlineAt) return;
+    const id = setInterval(() => force((n) => n + 1), 200);
+    return () => clearInterval(id);
+  }, [deadlineAt]);
+
+  if (!deadlineAt || !phaseTotalMs) {
+    return (
+      <PixelButton variant="primary" big onClick={onNext}>
+        {children}
+      </PixelButton>
+    );
+  }
+
+  const remainingSec = Math.max(0, (deadlineAt - Date.now()) / 1000);
+  return (
+    <button type="button" className="quiz-next-ring" onClick={onNext}>
+      <CountdownRing seconds={remainingSec} total={phaseTotalMs / 1000} size={56} />
+      <span className="quiz-next-ring__label">{children}</span>
+    </button>
+  );
+}
+
 function QuestionHost({ v }: { v: QuizHostViewPayload }) {
   const { remainingMs, ratio } = useCountdownSeconds(v.deadlineAt, v.timeLimitMs);
   const secondsLeft = Math.ceil(remainingMs / 1000);
@@ -136,6 +191,7 @@ function QuestionHost({ v }: { v: QuizHostViewPayload }) {
   );
 }
 
+/** Kahoot-style answer summary: a vertical bar per option (count/% above, correct check, avatar stack). */
 function RevealHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => void }) {
   useEffect(() => {
     playSound('correct');
@@ -151,31 +207,37 @@ function RevealHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => void 
           </span>
         </div>
         <h2 className="quiz-question-host__text">{v.question?.text}</h2>
-        <div className="quiz-plaques">
+        <div className="quiz-reveal-bars">
           {v.question?.choices.map((choice, i) => {
             const isCorrect = i === v.revealCorrectIndex;
             const count = v.distribution?.[i] ?? 0;
+            const pct = Math.round((count / total) * 100);
+            const voters = v.voters?.[i] ?? [];
             return (
-              <div
-                key={i}
-                className={`quiz-plaque ${isCorrect ? 'quiz-plaque--correct' : 'quiz-plaque--dim'}`}
-                style={{ background: PLAQUE_COLORS[i] }}
-              >
-                <PixelShape kind={SHAPES[i]!} className="quiz-plaque__shape" />
-                <span className="quiz-plaque__text">{choice}</span>
-                <div className="quiz-plaque__bar" style={{ width: `${(count / total) * 100}%` }} />
-                <span className="quiz-plaque__count">{count}</span>
+              <div key={i} className={`quiz-reveal-bar ${isCorrect ? 'is-correct' : ''}`}>
+                <div className="quiz-reveal-bar__stat">
+                  {count} <span className="quiz-reveal-bar__pct">({pct}%)</span>
+                  {isCorrect && <Icon name="check" className="pp-icon--sm" label="คำตอบที่ถูก" />}
+                </div>
+                <div className="quiz-reveal-bar__track">
+                  <div className="quiz-reveal-bar__fill" style={{ height: `${pct}%`, background: PLAQUE_COLORS[i] }}>
+                    <PixelShape kind={SHAPES[i]!} className="quiz-plaque__shape" />
+                  </div>
+                </div>
+                <div className="quiz-reveal-bar__voters" data-testid={`quiz-reveal-voters-${i}`}>
+                  {voters.slice(0, 6).map((voter) => (
+                    <AvatarSprite key={voter.playerId} avatarId={voter.avatarId} tint={voter.tint} size={22} animation="none" />
+                  ))}
+                  {voters.length > 6 && <span className="quiz-reveal-bar__more">+{voters.length - 6}</span>}
+                </div>
+                <div className="quiz-plaque__text quiz-reveal-bar__label">{choice}</div>
               </div>
             );
           })}
         </div>
-        <PixelButton variant="primary" big onClick={onNext}>
-          {v.questionIndex + 1 >= v.totalQuestions ? (
-            <>ดูผลสรุป <Chevron direction="right" /></>
-          ) : (
-            <>ข้อถัดไป <Chevron direction="right" /></>
-          )}
-        </PixelButton>
+        <NextControl deadlineAt={v.deadlineAt} phaseTotalMs={v.phaseTotalMs} onNext={onNext}>
+          ดูอันดับ <Chevron direction="right" />
+        </NextControl>
       </PixelPanel>
       {v.teamMode && v.teamScores ? (
         <TeamRaceTrack teamScores={v.teamScores} runners={v.runners} maxScore={maxPossibleScoreFromView(v)} />
@@ -183,6 +245,37 @@ function RevealHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => void 
         <RaceTrack runners={v.runners} />
       )}
     </div>
+  );
+}
+
+/** Top-5 leaderboard between questions, with the host's next-question control. */
+function LeaderboardHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => void }) {
+  const top5 = v.leaderboard.slice(0, 5);
+  const isLast = v.questionIndex + 1 >= v.totalQuestions;
+  return (
+    <PixelPanel className="quiz-question-host__card" style={{ textAlign: 'center' }}>
+      <h2><Icon name="star" className="pp-icon--md" /> อันดับล่าสุด</h2>
+      <ol className="party-scoreboard__list">
+        {top5.map((e) => (
+          <li key={e.player.playerId}>
+            <span className="party-scoreboard__rank">#{e.rank}</span>
+            <AvatarSprite avatarId={e.player.avatarId} tint={e.player.tint} size={32} animation="none" />
+            <span className="party-scoreboard__name">
+              {e.player.name}
+              {e.player.isBot && <span className="npc-badge">NPC</span>}
+            </span>
+            <span className="party-scoreboard__total">{e.player.score}</span>
+          </li>
+        ))}
+      </ol>
+      <NextControl deadlineAt={v.deadlineAt} phaseTotalMs={v.phaseTotalMs} onNext={onNext}>
+        {isLast ? (
+          <>ดูผลสรุป <Chevron direction="right" /></>
+        ) : (
+          <>ข้อถัดไป <Chevron direction="right" /></>
+        )}
+      </NextControl>
+    </PixelPanel>
   );
 }
 
