@@ -94,7 +94,7 @@ function allEligibleAnswered(state: DungeonDashState): boolean {
 }
 
 function toRead(state: DungeonDashState, now: number): DungeonDashState {
-  return { ...state, phase: 'read', questionStartedAt: null, phaseEndsAt: now + READ_MS };
+  return { ...state, phase: 'read', questionStartedAt: null, phaseEndsAt: now + state.readMs };
 }
 
 function beginQuestion(state: DungeonDashState, now: number): DungeonDashState {
@@ -109,11 +109,11 @@ function beginQuestion(state: DungeonDashState, now: number): DungeonDashState {
 
 /** Auto-play gets a timed deadline (so `tick` can advance it); manual mode waits for the host's "next". */
 function toReveal(state: DungeonDashState, now: number): DungeonDashState {
-  return { ...state, phase: 'reveal', phaseEndsAt: state.autoPlay ? now + REVEAL_AUTO_MS : null };
+  return { ...state, phase: 'reveal', phaseEndsAt: state.autoPlay ? now + state.revealAutoMs : null };
 }
 
 function toLeaderboard(state: DungeonDashState, now: number): DungeonDashState {
-  return { ...state, phase: 'leaderboard', phaseEndsAt: state.autoPlay ? now + LEADERBOARD_AUTO_MS : null };
+  return { ...state, phase: 'leaderboard', phaseEndsAt: state.autoPlay ? now + state.leaderboardAutoMs : null };
 }
 
 function toNextQuestionOrPodium(state: DungeonDashState, now: number): DungeonDashState {

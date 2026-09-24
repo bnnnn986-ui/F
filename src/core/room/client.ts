@@ -131,6 +131,9 @@ export class RoomClient extends Emitter<RoomClientEvents> {
   close(): void {
     this.closedByUser = true;
     clearTimeout(this.reconnectTimer);
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
     this.transport.close();
   }
 
