@@ -196,6 +196,22 @@
   to { transform: scale(1); opacity: 1; }
 }
 
+/* ---------- Icon ---------- */
+.pp-icon {
+  display: inline-block;
+  vertical-align: middle;
+  image-rendering: pixelated;
+}
+.pp-icon-stack {
+  position: relative;
+  display: inline-block;
+}
+.pp-icon-stack__badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+}
+
 /* ---------- D20 loading spinner ---------- */
 .d20-spinner {
   display: flex;
