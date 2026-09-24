@@ -18,6 +18,7 @@ import { showToast } from '../core/ui/toast';
 import { loadSnapshotFromStorage, isSnapshotFresh, type HostSnapshot } from '../core/room/snapshot';
 import { Icon } from '../core/ui/Icon';
 import { Chevron } from '../core/ui/PixelShape';
+import { HostControlBar } from './HostControlBar';
 
 type OpenState = 'checking-snapshot' | 'opening' | 'restoring' | 'open' | 'error';
 
@@ -185,8 +186,19 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
 
   if (phase === 'in-game' && activeModule) {
     const HostView = activeModule.HostView;
+    // Generic control bar for whatever game is mounted: pause/resume state is read duck-typed off
+    // the game's own view payload (games that don't report one just hide the pause/resume button).
+    const pausedFromView = gameView && typeof gameView === 'object' && 'paused' in gameView ? Boolean((gameView as { paused: unknown }).paused) : undefined;
     return (
       <div className="screen-center">
+        <HostControlBar
+          paused={pausedFromView}
+          onPause={() => hostRef.current?.sendHostAction({ type: 'pause' })}
+          onResume={() => hostRef.current?.sendHostAction({ type: 'resume' })}
+          onSkip={() => hostRef.current?.sendHostAction({ type: 'skip' })}
+          onGoToPodium={() => hostRef.current?.sendHostAction({ type: 'end' })}
+          onQuitWithoutScores={() => hostRef.current?.endGame()}
+        />
         <HostView
           view={gameView}
           onHostAction={(action) => hostRef.current?.sendHostAction(action)}

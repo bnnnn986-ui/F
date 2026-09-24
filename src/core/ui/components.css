@@ -309,3 +309,24 @@
   display: inline-block;
   line-height: 0;
 }
+
+/* ---------- Host control bar (room shell, over any game) ---------- */
+.host-control-bar {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 200;
+  display: flex;
+  gap: 0.4rem;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.35rem;
+  border-radius: var(--pp-radius);
+  backdrop-filter: blur(2px);
+}
+.host-control-bar .pixel-btn { padding: 0.4em 0.6em; }
+.host-control-bar__label { display: none; }
+@media (min-width: 640px) {
+  .host-control-bar__label { display: inline; }
+}
+.host-actions-row--stack { flex-direction: column; align-items: stretch; }
+.host-actions-row--stack .pixel-btn { width: 100%; }
