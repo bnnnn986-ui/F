@@ -4,6 +4,8 @@ import { PixelButton } from '../../../core/ui/PixelButton';
 import { PixelInput } from '../../../core/ui/PixelInput';
 import { PixelPanel } from '../../../core/ui/PixelPanel';
 import { showToast } from '../../../core/ui/toast';
+import { Chevron } from '../../../core/ui/PixelShape';
+import { Icon } from '../../../core/ui/Icon';
 import {
   deleteCustomPack,
   exportPackToJson,
@@ -196,11 +198,11 @@ function QuestionPackEditor({
             <div className="quiz-editor__question-header">
               <strong>ข้อ {qi + 1}</strong>
               <div>
-                <PixelButton variant="secondary" onClick={() => move(qi, -1)} disabled={qi === 0}>
-                  ↑
+                <PixelButton variant="secondary" onClick={() => move(qi, -1)} disabled={qi === 0} aria-label="เลื่อนข้อขึ้น">
+                  <Chevron direction="up" />
                 </PixelButton>
-                <PixelButton variant="secondary" onClick={() => move(qi, 1)} disabled={qi === draft.questions.length - 1}>
-                  ↓
+                <PixelButton variant="secondary" onClick={() => move(qi, 1)} disabled={qi === draft.questions.length - 1} aria-label="เลื่อนข้อลง">
+                  <Chevron direction="down" />
                 </PixelButton>
                 <PixelButton
                   variant="danger"
@@ -226,8 +228,8 @@ function QuestionPackEditor({
                 />
                 <PixelInput value={c} onInput={(e) => updateChoice(qi, ci, (e.target as HTMLInputElement).value)} placeholder={`ตัวเลือก ${ci + 1}`} />
                 {q.choices.length > 2 && (
-                  <PixelButton variant="danger" onClick={() => removeChoice(qi, ci)}>
-                    ✕
+                  <PixelButton variant="danger" onClick={() => removeChoice(qi, ci)} aria-label="ลบตัวเลือกนี้">
+                    <Icon name="cross" className="pp-icon--sm" />
                   </PixelButton>
                 )}
               </div>

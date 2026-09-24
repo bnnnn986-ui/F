@@ -10,6 +10,7 @@ import { PixelButton } from '../core/ui/PixelButton';
 import { ItemSprite } from '../core/ui/ItemSprite';
 import { navigate } from '../app/router';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
+import { Icon } from '../core/ui/Icon';
 
 export function HubPage() {
   const [activeGame, setActiveGame] = useState<GameManifest | null>(null);
@@ -45,7 +46,7 @@ export function HubPage() {
         </div>
         <div className="hub-hero__cta">
           <PixelButton variant="primary" big onClick={() => navigate('/party/host')}>
-            🍺 สร้างโรงเตี๊ยม (เป็นผู้คุมเกม)
+            <Icon name="mug" className="pp-icon--md" /> สร้างโรงเตี๊ยม (เป็นผู้คุมเกม)
           </PixelButton>
         </div>
       </header>

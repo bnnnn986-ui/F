@@ -7,6 +7,7 @@ import { Badge } from '../core/ui/Badge';
 import type { DecorId } from '../core/sprites/decor';
 import { ALL_CHARACTERS } from '../core/sprites/heroes';
 import { isItemId } from '../core/sprites/items';
+import { Icon } from '../core/ui/Icon';
 
 const CHARACTER_IDS = new Set(ALL_CHARACTERS.map((a) => a.id));
 
@@ -39,9 +40,11 @@ export function GameCard({ manifest, onClick }: { manifest: GameManifest; onClic
       <p className="game-card__desc">{manifest.descriptionTh}</p>
       <div className="game-card__meta">
         <span>
-          👥 {manifest.minPlayers}-{manifest.maxPlayers} คน
+          <Icon name="group" className="pp-icon--sm" /> {manifest.minPlayers}-{manifest.maxPlayers} คน
         </span>
-        <span>⏱ {manifest.durationMinutes} นาที</span>
+        <span>
+          <Icon name="hourglass" className="pp-icon--sm" /> {manifest.durationMinutes} นาที
+        </span>
       </div>
       <div className="game-card__tags">
         {manifest.tags.map((tag) => (

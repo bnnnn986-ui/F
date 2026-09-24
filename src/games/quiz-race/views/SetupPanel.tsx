@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import { PixelPanel } from '../../../core/ui/PixelPanel';
 import { PixelButton } from '../../../core/ui/PixelButton';
 import { Badge } from '../../../core/ui/Badge';
+import { Icon } from '../../../core/ui/Icon';
+import { Chevron } from '../../../core/ui/PixelShape';
 import { QuizEditor } from './Editor';
 import type { QuizSetup } from '../setupConfig';
 import type { BotDifficulty } from '../logic/bots';
@@ -115,7 +117,7 @@ export function SetupPanel({
 
       <div className="quiz-setup__actions">
         <PixelButton variant="secondary" onClick={() => setEditorOpen(true)}>
-          📜 สร้างชุดคำถามเอง
+          <Icon name="quill" className="pp-icon--md" /> สร้างชุดคำถามเอง
         </PixelButton>
         <PixelButton
           variant="primary"
@@ -123,7 +125,7 @@ export function SetupPanel({
           disabled={playerCount < 1}
           onClick={() => onHostAction({ type: 'start' })}
         >
-          ออกผจญภัย! ▶
+          ออกผจญภัย! <Chevron direction="right" />
         </PixelButton>
       </div>
       {playerCount < 1 && <p className="quiz-setup__hint">รอนักผจญภัยอย่างน้อย 1 คน (หรือเพิ่มบอทจากโรงเตี๊ยม)</p>}

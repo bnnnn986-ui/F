@@ -10,6 +10,9 @@ import { RaceTrack } from './RaceTrack';
 import { TeamRaceTrack } from './TeamRaceTrack';
 import { SetupPanel } from './SetupPanel';
 import { ReportView } from './ReportView';
+import { Icon, EmblemIcon } from '../../../core/ui/Icon';
+import { PixelShape, Chevron, type ShapeKind } from '../../../core/ui/PixelShape';
+import type { EmblemName } from '../../../core/sprites/icons';
 import type { QuizHostAction, QuizHostViewPayload } from '../index';
 
 /** Mirrors logic/reducer.ts's getMaxPossibleScore, computed from the view payload (no full state here). */
@@ -18,7 +21,7 @@ function maxPossibleScoreFromView(v: QuizHostViewPayload): number {
   return Math.max(1, questionsPlayed * 1500);
 }
 
-const SHAPES = ['▲', '◆', '●', '■'];
+const SHAPES: ShapeKind[] = ['triangle', 'diamond', 'circle', 'square'];
 const PLAQUE_COLORS = ['#c0392b', '#2471a3', '#d4ac0d', '#229954'];
 
 export function QuizRaceHostView({
@@ -118,7 +121,7 @@ function QuestionHost({ v }: { v: QuizHostViewPayload }) {
         <div className="quiz-plaques">
           {v.question?.choices.map((choice, i) => (
             <div key={i} className="quiz-plaque" style={{ background: PLAQUE_COLORS[i] }}>
-              <span className="quiz-plaque__shape">{SHAPES[i]}</span>
+              <PixelShape kind={SHAPES[i]!} className="quiz-plaque__shape" />
               <span className="quiz-plaque__text">{choice}</span>
             </div>
           ))}
@@ -158,7 +161,7 @@ function RevealHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => void 
                 className={`quiz-plaque ${isCorrect ? 'quiz-plaque--correct' : 'quiz-plaque--dim'}`}
                 style={{ background: PLAQUE_COLORS[i] }}
               >
-                <span className="quiz-plaque__shape">{SHAPES[i]}</span>
+                <PixelShape kind={SHAPES[i]!} className="quiz-plaque__shape" />
                 <span className="quiz-plaque__text">{choice}</span>
                 <div className="quiz-plaque__bar" style={{ width: `${(count / total) * 100}%` }} />
                 <span className="quiz-plaque__count">{count}</span>
@@ -167,7 +170,11 @@ function RevealHost({ v, onNext }: { v: QuizHostViewPayload; onNext: () => void 
           })}
         </div>
         <PixelButton variant="primary" big onClick={onNext}>
-          {v.questionIndex + 1 >= v.totalQuestions ? 'ดูผลสรุป ▶' : 'ข้อถัดไป ▶'}
+          {v.questionIndex + 1 >= v.totalQuestions ? (
+            <>ดูผลสรุป <Chevron direction="right" /></>
+          ) : (
+            <>ข้อถัดไป <Chevron direction="right" /></>
+          )}
         </PixelButton>
       </PixelPanel>
       {v.teamMode && v.teamScores ? (
@@ -211,7 +218,7 @@ function PodiumHost({
 
   return (
     <PixelPanel className="quiz-podium" style={{ textAlign: 'center' }}>
-      <h2>🏆 ตำนานประจำดันเจี้ยน</h2>
+      <h2><Icon name="crown" className="pp-icon--md" /> ตำนานประจำดันเจี้ยน</h2>
 
       {v.teamMode && v.teamScores && v.teamScores.length > 0 && (
         <div className="quiz-podium__teams">
@@ -223,7 +230,7 @@ function PodiumHost({
                 <li key={ts.team.id}>
                   <span className="party-scoreboard__rank">#{i + 1}</span>
                   <span className="party-scoreboard__name" style={{ color: ts.team.color }}>
-                    {ts.team.emblem} {ts.team.name}
+                    <EmblemIcon name={ts.team.emblem as EmblemName} className="pp-icon--sm" /> {ts.team.name}
                   </span>
                   <span className="party-scoreboard__total">{ts.avgScore} คะแนน</span>
                   {ts.mvpPlayerId && (
@@ -260,15 +267,15 @@ function PodiumHost({
         <div className="quiz-podium__stats">
           {v.podiumStats.mostAccurate && (
             <PixelPanel dark>
-              🎯 แม่นยำที่สุด: {v.podiumStats.mostAccurate.name} ({v.podiumStats.mostAccurate.correctCount}/{v.podiumStats.mostAccurate.totalQuestions})
+              <Icon name="target" className="pp-icon--sm" /> แม่นยำที่สุด: {v.podiumStats.mostAccurate.name} ({v.podiumStats.mostAccurate.correctCount}/{v.podiumStats.mostAccurate.totalQuestions})
             </PixelPanel>
           )}
           {v.podiumStats.fastest && (
-            <PixelPanel dark>⚡ ตอบไวที่สุด: {v.podiumStats.fastest.name}</PixelPanel>
+            <PixelPanel dark><Icon name="lightning" className="pp-icon--sm" /> ตอบไวที่สุด: {v.podiumStats.fastest.name}</PixelPanel>
           )}
           {v.podiumStats.longestStreak && (
             <PixelPanel dark>
-              🔥 สตรีคยาวที่สุด: {v.podiumStats.longestStreak.name} ({v.podiumStats.longestStreak.streak})
+              <Icon name="flame" className="pp-icon--sm" /> สตรีคยาวที่สุด: {v.podiumStats.longestStreak.name} ({v.podiumStats.longestStreak.streak})
             </PixelPanel>
           )}
         </div>
@@ -285,13 +292,13 @@ function PodiumHost({
 
       <div className="host-actions-row">
         <PixelButton variant="secondary" onClick={() => setShowReport(true)}>
-          📜 ดูรายงานผล
+          <Icon name="scroll" className="pp-icon--md" /> ดูรายงานผล
         </PixelButton>
         <PixelButton variant="secondary" onClick={onRestart}>
-          🔁 เล่นอีกรอบ
+          <Icon name="replay" className="pp-icon--md" /> เล่นอีกรอบ
         </PixelButton>
         <PixelButton variant="primary" big onClick={onExit}>
-          🏠 กลับโรงเตี๊ยม
+          <Icon name="home" className="pp-icon--md" /> กลับโรงเตี๊ยม
         </PixelButton>
       </div>
       <PixelButton className="quiz-podium__force-exit" variant="danger" onClick={onBackToLobby}>

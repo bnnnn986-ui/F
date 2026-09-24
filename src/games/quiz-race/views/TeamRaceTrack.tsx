@@ -1,5 +1,7 @@
 import { AvatarSprite } from '../../../core/ui/AvatarSprite';
 import { ItemSprite } from '../../../core/ui/ItemSprite';
+import { EmblemIcon } from '../../../core/ui/Icon';
+import type { EmblemName } from '../../../core/sprites/icons';
 import type { TeamScore } from '../logic/teamScoring';
 import type { EnrichedRunnerView } from '../index';
 
@@ -24,7 +26,8 @@ export function TeamRaceTrack({
         return (
           <div key={ts.team.id} className="race-track__lane">
             <span className="race-track__name" style={{ color: ts.team.color }}>
-              {ts.team.emblem} {ts.team.name} · เฉลี่ย {ts.avgScore}
+              <EmblemIcon name={ts.team.emblem as EmblemName} className="pp-icon--sm" /> {ts.team.name} · เฉลี่ย{' '}
+              <span className="pixel-num">{ts.avgScore}</span>
             </span>
             <div className="race-track__rail">
               <div className="race-track__runner race-track__runner--team" style={{ left: `${progress * 88}%` }}>

@@ -52,12 +52,12 @@ test('party room: host + 3 players play a full Dungeon Dash round and return to 
 
   // --- host picks Dungeon Dash, configures a short 3-question round, starts ---
   await hostPage.getByRole('button', { name: /ดันเจี้ยนแดช/ }).click();
-  await hostPage.getByRole('button', { name: 'ออกผจญภัย: ดันเจี้ยนแดช ▶' }).click();
+  await hostPage.getByRole('button', { name: 'ออกผจญภัย: ดันเจี้ยนแดช' }).click();
 
   await expect(hostPage.getByRole('heading', { name: 'ตั้งค่าภารกิจ: ดันเจี้ยนแดช' })).toBeVisible({ timeout: 20_000 });
   await hostPage.getByRole('button', { name: '5', exact: true }).click();
   await hostPage.getByRole('button', { name: '10 วิ' }).click();
-  await hostPage.getByRole('button', { name: 'ออกผจญภัย! ▶' }).click();
+  await hostPage.getByRole('button', { name: 'ออกผจญภัย!' }).click();
 
   // --- countdown -> question 1 on every screen ---
   for (const page of [hostPage, ...playerPages]) {

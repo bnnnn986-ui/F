@@ -3,6 +3,7 @@ import { HEROES, POLYMORPH, getCharacter } from '../core/sprites/heroes';
 import { TINT_COUNT } from '../core/sprites/recolor';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
 import { playSound } from '../core/audio/audio';
+import { Icon } from '../core/ui/Icon';
 
 export interface AvatarPickerValue {
   avatarId: string;
@@ -27,7 +28,7 @@ export function AvatarPicker({ value, onChange }: { value: AvatarPickerValue; on
           className={`avatar-picker__tab ${tab === 'hero' ? 'is-active' : ''}`}
           onClick={() => setTab('hero')}
         >
-          ⚔️ อาชีพนักผจญภัย
+          <Icon name="swords" className="pp-icon--sm" /> อาชีพนักผจญภัย
         </button>
         <button
           type="button"
@@ -36,7 +37,7 @@ export function AvatarPicker({ value, onChange }: { value: AvatarPickerValue; on
           className={`avatar-picker__tab ${tab === 'polymorph' ? 'is-active' : ''}`}
           onClick={() => setTab('polymorph')}
         >
-          🐾 ร่างแปลง
+          <Icon name="paw" className="pp-icon--sm" /> ร่างแปลง
         </button>
       </div>
 

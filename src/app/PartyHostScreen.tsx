@@ -16,6 +16,8 @@ import { D20Spinner } from '../core/ui/D20Spinner';
 import { playSound } from '../core/audio/audio';
 import { showToast } from '../core/ui/toast';
 import { loadSnapshotFromStorage, isSnapshotFresh, type HostSnapshot } from '../core/room/snapshot';
+import { Icon } from '../core/ui/Icon';
+import { Chevron } from '../core/ui/PixelShape';
 
 type OpenState = 'checking-snapshot' | 'opening' | 'restoring' | 'open' | 'error';
 
@@ -220,7 +222,7 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
             if (bot) showToast(`เพิ่ม ${bot.name} (บอท) เข้าห้องแล้ว`);
           }}
         >
-          🤖 เพิ่มนักผจญภัย NPC ({botCount}/10)
+          เพิ่มนักผจญภัย NPC ({botCount}/10)
         </PixelButton>
         <PixelButton
           variant="secondary"
@@ -231,7 +233,7 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
             }
           }}
         >
-          📜 รายงานย้อนหลัง
+<Icon name="scroll" className="pp-icon--md" /> รายงานย้อนหลัง
         </PixelButton>
       </div>
 
@@ -259,7 +261,13 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
           disabled={!selectedGameId || players.length < 1}
           onClick={() => selectedGameId && hostRef.current?.startGame(selectedGameId)}
         >
-          {selectedManifest ? `ออกผจญภัย: ${selectedManifest.titleTh} ▶` : 'เลือกภารกิจก่อนเริ่ม'}
+          {selectedManifest ? (
+            <>
+              ออกผจญภัย: {selectedManifest.titleTh} <Chevron direction="right" />
+            </>
+          ) : (
+            'เลือกภารกิจก่อนเริ่ม'
+          )}
         </PixelButton>
         {players.length < 1 && <p className="host-lobby__hint">รอนักผจญภัยเข้าร่วมอย่างน้อย 1 คนก่อนเริ่ม</p>}
       </div>

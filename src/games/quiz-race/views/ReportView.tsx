@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'preact/hooks';
 import { PixelPanel } from '../../../core/ui/PixelPanel';
 import { PixelButton } from '../../../core/ui/PixelButton';
+import { Icon } from '../../../core/ui/Icon';
+import { Chevron } from '../../../core/ui/PixelShape';
 import type { AdventureReport, PlayerReportRow } from '../logic/report';
 import { buildPlayersCsv, buildQuestionsCsv, buildTeamsCsv } from '../logic/csv';
 
@@ -56,7 +58,7 @@ export function ReportView({ report, onClose }: { report: AdventureReport; onClo
     <div className="quiz-report" id="quiz-report-printable">
       <div className="quiz-report__toolbar no-print">
         <PixelButton variant="secondary" onClick={onClose}>
-          ← กลับ
+          <Chevron direction="left" /> กลับ
         </PixelButton>
         <div className="quiz-report__toolbar-actions">
           <PixelButton
@@ -67,16 +69,16 @@ export function ReportView({ report, onClose }: { report: AdventureReport; onClo
               if (report.teams) downloadTextFile(`dungeon-dash-teams-${report.generatedAt}.csv`, buildTeamsCsv(report));
             }}
           >
-            ⬇️ ดาวน์โหลด CSV
+            ดาวน์โหลด CSV
           </PixelButton>
           <PixelButton variant="primary" onClick={() => window.print()}>
-            🖨️ พิมพ์ / บันทึก PDF
+            พิมพ์ / บันทึก PDF
           </PixelButton>
         </div>
       </div>
 
       <PixelPanel className="quiz-report__panel">
-        <h2>📜 บันทึกการผจญภัย</h2>
+        <h2><Icon name="scroll" className="pp-icon--md" /> บันทึกการผจญภัย</h2>
         <p className="quiz-report__meta">
           {dateStr} · คลังคำถาม: {report.packNameTh} · ผู้เล่น {report.playerCount} คน · {report.questionCount} ข้อ
         </p>
@@ -165,7 +167,7 @@ export function ReportView({ report, onClose }: { report: AdventureReport; onClo
             <tr>
               {(Object.keys(SORT_LABEL) as SortKey[]).map((key) => (
                 <th key={key} className="no-print quiz-report__sortable" onClick={() => toggleSort(key)}>
-                  {SORT_LABEL[key]} {sortKey === key ? (sortDir === 1 ? '▲' : '▼') : ''}
+                  {SORT_LABEL[key]} {sortKey === key && <Chevron direction={sortDir === 1 ? 'up' : 'down'} />}
                 </th>
               ))}
               <th className="print-only">อันดับ</th>
@@ -220,7 +222,7 @@ export function ReportView({ report, onClose }: { report: AdventureReport; onClo
                   <tr key={a.questionIndex}>
                     <td>{a.questionIndex + 1}</td>
                     <td>{a.choiceIndex !== null ? `ตัวเลือกที่ ${a.choiceIndex + 1}` : 'ไม่ได้ตอบ'}</td>
-                    <td>{a.choiceIndex === null ? '—' : a.correct ? '✓' : '✗'}</td>
+                    <td>{a.choiceIndex === null ? '—' : <Icon name={a.correct ? 'check' : 'cross'} className="pp-icon--sm" />}</td>
                     <td>{a.elapsedMs !== null ? (a.elapsedMs / 1000).toFixed(1) + 's' : '-'}</td>
                     <td>{a.points}</td>
                   </tr>

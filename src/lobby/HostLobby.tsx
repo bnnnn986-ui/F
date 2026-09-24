@@ -4,6 +4,7 @@ import { PixelButton } from '../core/ui/PixelButton';
 import { QRDisplay } from '../core/ui/QRDisplay';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
 import { showToast } from '../core/ui/toast';
+import { Icon } from '../core/ui/Icon';
 import type { RoomPlayer } from '../core/room/protocol';
 
 /** Party room info panel + player roster, shared by the lobby and in-game host screens. */
@@ -47,10 +48,10 @@ export function HostLobby({
             </p>
             <div className="host-lobby__actions">
               <PixelButton variant="secondary" onClick={copyLink}>
-                {copied ? 'คัดลอกแล้ว ✓' : 'คัดลอกลิงก์เข้าร่วม'}
+                {copied ? <><Icon name="check" className="pp-icon--sm" /> คัดลอกแล้ว</> : 'คัดลอกลิงก์เข้าร่วม'}
               </PixelButton>
               <PixelButton variant={locked ? 'danger' : 'secondary'} onClick={onToggleLock}>
-                {locked ? '🔒 ปลดล็อกห้อง' : '🔓 ล็อกห้อง'}
+                <Icon name="lock" className="pp-icon--sm" /> {locked ? 'ปลดล็อกห้อง' : 'ล็อกห้อง'}
               </PixelButton>
             </div>
           </div>
@@ -81,7 +82,7 @@ export function HostLobby({
                     {p.isBot && <span className="npc-badge">NPC</span>}
                   </span>
                   <span className="host-lobby__kick-x" aria-hidden="true">
-                    ✕
+                    <Icon name="cross" className="pp-icon--sm" />
                   </span>
                 </button>
               </li>
