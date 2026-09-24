@@ -10,7 +10,7 @@ import { buildAdventureReport, type AdventureReport } from './logic/report';
 import { saveReport } from './content/reportHistory';
 import { BUILT_IN_PACKS, getBuiltInPack } from './content';
 import { loadCustomPacks } from './content/customPacks';
-import { DEFAULT_SETUP, type QuizSetup } from './setupConfig';
+import { DEFAULT_SETUP, saveQuizSetup, type QuizSetup } from './setupConfig';
 import type { DungeonDashState, QuizConfig } from './logic/types';
 
 export type QuizHostAction =
@@ -18,7 +18,27 @@ export type QuizHostAction =
   | { type: 'start' }
   | { type: 'next' }
   | { type: 'restart' }
-  | { type: 'exitToLobby' };
+  | { type: 'exitToLobby' }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  | { type: 'skip' }
+  /** Force-ends the round to the podium, tallying scores so far (host control bar "ไปที่โพเดียมเลย"). */
+  | { type: 'end' }
+  | { type: 'setAutoPlay'; autoPlay: boolean };
+
+/**
+ * Default rule for "เดินเกมอัตโนมัติ" when the host hasn't made an explicit
+ * choice yet: OFF on a wide/projector viewport (host is presenting), ON on
+ * a narrow one (host is likely playing along on their own device too). An
+ * explicit `setup.autoPlay` always wins over this default.
+ */
+export function defaultAutoPlay(): boolean {
+  return typeof window !== 'undefined' && window.innerWidth < 900;
+}
+
+function effectiveAutoPlay(setup: QuizSetup): boolean {
+  return setup.autoPlay ?? defaultAutoPlay();
+}
 
 export type QuizPlayerIntent = { type: 'answer'; choiceIndex: number };
 
@@ -86,7 +106,7 @@ class DungeonDashGameHost implements GameHost<unknown> {
       const { questions, config, packNameTh } = buildQuestions(this.setup);
       this.packNameTh = packNameTh;
       const players = this.playersForReducer();
-      this.state = createInitialState(config, questions, players);
+      this.state = createInitialState(config, questions, players, effectiveAutoPlay(this.setup));
     }
   }
 
@@ -113,7 +133,7 @@ class DungeonDashGameHost implements GameHost<unknown> {
   }
 
   onPlayerLeave(playerId: string): void {
-    this.state = dungeonDashReducer(this.state, { type: 'playerLeave', playerId });
+    this.state = dungeonDashReducer(this.state, { type: 'playerLeave', playerId, now: Date.now() });
   }
 
   onIntent(playerId: string, intent: unknown): void {
@@ -131,7 +151,7 @@ class DungeonDashGameHost implements GameHost<unknown> {
         this.setup = { ...this.setup, ...a.setup, config: { ...this.setup.config, ...a.setup.config } };
         const { questions, config, packNameTh } = buildQuestions(this.setup);
         this.packNameTh = packNameTh;
-        this.state = createInitialState(config, questions, this.playersForReducer());
+        this.state = createInitialState(config, questions, this.playersForReducer(), effectiveAutoPlay(this.setup));
         break;
       }
       case 'start':
@@ -144,7 +164,7 @@ class DungeonDashGameHost implements GameHost<unknown> {
       case 'restart': {
         const { questions, config, packNameTh } = buildQuestions(this.setup);
         this.packNameTh = packNameTh;
-        this.state = createInitialState(config, questions, this.playersForReducer());
+        this.state = createInitialState(config, questions, this.playersForReducer(), effectiveAutoPlay(this.setup));
         this.lastScheduledQuestionIndex = -1;
         this.botSchedule.clear();
         this.ended = false;
@@ -153,6 +173,27 @@ class DungeonDashGameHost implements GameHost<unknown> {
       }
       case 'exitToLobby':
         this.finishAndExit();
+        break;
+      case 'pause':
+        this.state = dungeonDashReducer(this.state, { type: 'pause', now: Date.now() });
+        break;
+      case 'resume':
+        this.state = dungeonDashReducer(this.state, { type: 'resume', now: Date.now() });
+        break;
+      case 'skip':
+        this.lastScheduledQuestionIndex = -1;
+        this.state = dungeonDashReducer(this.state, { type: 'skip', now: Date.now() });
+        break;
+      case 'end':
+        // "ไปที่โพเดียมเลย": force-end to the podium, tallying scores so far — the room-level
+        // party score is only awarded once the host presses "กลับโรงเตี๊ยม" from there.
+        this.state = dungeonDashReducer(this.state, { type: 'end', now: Date.now() });
+        this.saveReportOnce();
+        break;
+      case 'setAutoPlay':
+        this.setup = { ...this.setup, autoPlay: a.autoPlay };
+        saveQuizSetup(this.setup);
+        this.state = dungeonDashReducer(this.state, { type: 'setAutoPlay', autoPlay: a.autoPlay });
         break;
     }
   }

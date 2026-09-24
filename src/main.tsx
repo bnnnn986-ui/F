@@ -9,9 +9,11 @@ import './core/ui/components.css';
 import { App } from './app/App';
 import { loadPixelLabOverrides } from './core/sprites/engine';
 import { applyStoredLargeTextPreference } from './core/ui/LargeTextToggle';
+import { initPwa } from './core/pwa/register';
 
 loadPixelLabOverrides();
 applyStoredLargeTextPreference();
+initPwa();
 
 const root = document.getElementById('app');
 if (root) render(<App />, root);

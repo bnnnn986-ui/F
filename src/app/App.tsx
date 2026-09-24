@@ -5,6 +5,7 @@ import { PartyJoinFlow } from './PartyJoinFlow';
 import { PartyPlayScreen } from './PartyPlayScreen';
 import { PixelBackground } from '../core/ui/PixelBackground';
 import { ToastHost } from '../core/ui/toast';
+import { UpdateToast } from '../core/pwa/UpdateToast';
 import '../hub/hub.css';
 import '../lobby/lobby.css';
 
@@ -19,6 +20,7 @@ export function App() {
       {route.name === 'join' && <PartyJoinFlow code={route.code} />}
       {route.name === 'partyPlay' && <PartyPlayScreen />}
       <ToastHost />
+      <UpdateToast />
     </>
   );
 }

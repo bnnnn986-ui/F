@@ -74,7 +74,22 @@ export class RoomClient extends Emitter<RoomClientEvents> {
     this.avatarId = opts.avatarId;
     this.tint = opts.tint ?? 0;
     this.maxReconnectAttempts = opts.maxReconnectAttempts ?? 5;
+    // Phones suspend/throttle WebRTC and timers while backgrounded (screen
+    // lock, app-switch); the moment the tab is visible again, retry now
+    // instead of waiting out whatever backoff delay was already running —
+    // most drops during a lock/switch resolve in well under a second.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    }
   }
+
+  private handleVisibilityChange = (): void => {
+    if (document.visibilityState !== 'visible') return;
+    if (this.closedByUser || !this.reconnectTimer) return;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
+    this.connect(this.roomCode).catch(() => undefined);
+  };
 
   async connect(roomCode: string): Promise<void> {
     this.roomCode = roomCode;

@@ -4,13 +4,14 @@ import type { GameManifest } from '../games/types';
 import { GameCard } from './GameCard';
 import { JoinPanel } from './JoinPanel';
 import { HowToPlayModal } from './HowToPlayModal';
-import { MuteToggle } from '../core/ui/MuteToggle';
+import { HapticToggle, MuteToggle } from '../core/ui/MuteToggle';
 import { LargeTextToggle } from '../core/ui/LargeTextToggle';
 import { PixelButton } from '../core/ui/PixelButton';
 import { ItemSprite } from '../core/ui/ItemSprite';
 import { navigate } from '../app/router';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
 import { Icon } from '../core/ui/Icon';
+import { InstallButton } from '../core/pwa/InstallButton';
 
 export function HubPage() {
   const [activeGame, setActiveGame] = useState<GameManifest | null>(null);
@@ -20,10 +21,11 @@ export function HubPage() {
       <header className="hub-hero">
         <div className="hub-hero__banner" style={{ backgroundImage: "url('assets/pixellab/scenes/tavern-bg.png')" }} aria-hidden="true" />
         <div className="hub-hero__topbar">
-          <span />
+          <InstallButton compact />
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <LargeTextToggle />
             <MuteToggle />
+            <HapticToggle />
           </div>
         </div>
         <div className="hub-hero__logo">

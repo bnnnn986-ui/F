@@ -14,7 +14,7 @@ export interface QuestionPack {
   questions: Question[];
 }
 
-export type DungeonDashPhase = 'setup' | 'countdown' | 'question' | 'reveal' | 'podium';
+export type DungeonDashPhase = 'setup' | 'countdown' | 'read' | 'question' | 'reveal' | 'leaderboard' | 'podium';
 
 export interface QuizConfig {
   packId: string;
@@ -56,9 +56,22 @@ export interface DungeonDashState {
   config: QuizConfig;
   questions: Question[]; // selected + (optionally) shuffled play order
   currentIndex: number;
+  /** "เดินเกมอัตโนมัติ" — auto-advances reveal -> leaderboard -> next without the host pressing a button. */
+  autoPlay: boolean;
+  /** Phase durations (ms) — normally the `*_MS` constants; overridable (e.g. `?fast=1` in e2e) at creation time. */
+  readMs: number;
+  revealAutoMs: number;
+  leaderboardAutoMs: number;
   questionStartedAt: number | null;
-  /** Countdown/question deadline (epoch ms, host clock). Null when not timed (setup/reveal/podium). */
+  /** Countdown/read/question deadline, and (auto-play only) reveal/leaderboard deadline — epoch ms, host clock. Null when not timed. */
   phaseEndsAt: number | null;
+  /**
+   * Epoch ms (host clock) the game was paused at, or null when running.
+   * On resume, every absolute timestamp above is shifted forward by the
+   * elapsed pause duration, so remaining time is preserved exactly and the
+   * whole thing is reload-safe (just two more plain timestamps to persist).
+   */
+  pausedAt: number | null;
   players: Record<string, DungeonPlayerState>;
 }
 
@@ -68,7 +81,16 @@ export type DungeonDashAction =
   | { type: 'answer'; playerId: string; choiceIndex: number; now: number }
   | { type: 'next'; now: number }
   | { type: 'end'; now: number }
+  | { type: 'skip'; now: number }
+  | { type: 'pause'; now: number }
+  | { type: 'resume'; now: number }
+  | { type: 'setAutoPlay'; autoPlay: boolean }
   | { type: 'playerJoin'; playerId: string; name: string; avatarId: string; tint: number; isBot: boolean; now: number }
-  | { type: 'playerLeave'; playerId: string };
+  | { type: 'playerLeave'; playerId: string; now: number };
 
 export const COUNTDOWN_MS = 3000;
+/** Read phase: the question text (no answers) shown for a few seconds before answering opens. */
+export const READ_MS = 3000;
+/** Auto-play only: how long the reveal / leaderboard phases linger before auto-advancing. */
+export const REVEAL_AUTO_MS = 5000;
+export const LEADERBOARD_AUTO_MS = 5000;

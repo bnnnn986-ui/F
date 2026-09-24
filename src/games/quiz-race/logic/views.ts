@@ -10,7 +10,9 @@ export interface SafeQuestion {
 function toSafeQuestion(state: DungeonDashState, index: number): SafeQuestion | null {
   const q = state.questions[index];
   if (!q) return null;
-  return { text: q.text, choices: q.choices };
+  // During the "read" phase the question text is shown but answers stay hidden
+  // (on host AND phones) until answering opens.
+  return { text: q.text, choices: state.phase === 'read' ? [] : q.choices };
 }
 
 export interface RunnerView {
@@ -41,15 +43,40 @@ function buildRunners(state: DungeonDashState): RunnerView[] {
     }));
 }
 
-function answerDistribution(state: DungeonDashState): number[] | null {
-  const q = state.questions[state.currentIndex];
-  if (!q || state.phase !== 'reveal') return null;
-  const counts = new Array(q.choices.length).fill(0);
+function answerCounts(state: DungeonDashState, choiceCount: number): number[] {
+  const counts = new Array(choiceCount).fill(0);
   for (const p of Object.values(state.players)) {
     const a = p.answers[state.currentIndex];
     if (a) counts[a.choiceIndex] = (counts[a.choiceIndex] ?? 0) + 1;
   }
   return counts;
+}
+
+function answerDistribution(state: DungeonDashState): number[] | null {
+  const q = state.questions[state.currentIndex];
+  if (!q || state.phase !== 'reveal') return null;
+  return answerCounts(state, q.choices.length);
+}
+
+export interface AnswerVoter {
+  playerId: string;
+  name: string;
+  avatarId: string;
+  tint: number;
+}
+
+/** Kahoot-style avatar stack per answer option, for the host reveal bar chart. */
+function answerVoters(state: DungeonDashState): AnswerVoter[][] | null {
+  const q = state.questions[state.currentIndex];
+  if (!q || state.phase !== 'reveal') return null;
+  const buckets: AnswerVoter[][] = q.choices.map(() => []);
+  for (const p of Object.values(state.players).sort((a, b) => a.joinedAtIndex - b.joinedAtIndex)) {
+    const a = p.answers[state.currentIndex];
+    if (a && buckets[a.choiceIndex]) {
+      buckets[a.choiceIndex]!.push({ playerId: p.playerId, name: p.name, avatarId: p.avatarId, tint: p.tint });
+    }
+  }
+  return buckets;
 }
 
 export interface PodiumStats {
@@ -85,13 +112,19 @@ export interface HostViewPayload {
   questionIndex: number;
   totalQuestions: number;
   question: SafeQuestion | null;
-  /** Only populated once phase is 'reveal' (or 'podium', for the last question shown). */
+  /** Only populated once phase is 'reveal'/'leaderboard' (or 'podium', for the last question shown). */
   revealCorrectIndex: number | null;
   timeLimitMs: number;
   deadlineAt: number | null;
+  /** True while the host has paused the game (timers frozen). */
+  paused: boolean;
+  /** "เดินเกมอัตโนมัติ" — whether reveal/leaderboard auto-advance without the host pressing a button. */
+  autoPlay: boolean;
   answeredCount: number;
   eligibleCount: number;
   distribution: number[] | null;
+  /** Kahoot-style avatar stack of who picked each option — only populated on 'reveal'. */
+  voters: AnswerVoter[][] | null;
   runners: RunnerView[];
   leaderboard: ReturnType<typeof getLeaderboard>;
   podiumStats: PodiumStats | null;
@@ -101,18 +134,22 @@ export function buildHostView(state: DungeonDashState): HostViewPayload {
   const q = state.questions[state.currentIndex];
   const eligible = Object.values(state.players).filter((p) => p.connected && p.joinedAtIndex <= state.currentIndex);
   const answeredCount = eligible.filter((p) => state.currentIndex in p.answers).length;
+  const answerRevealed = state.phase === 'reveal' || state.phase === 'leaderboard' || state.phase === 'podium';
 
   return {
     phase: state.phase,
     questionIndex: state.currentIndex,
     totalQuestions: state.questions.length,
     question: toSafeQuestion(state, state.currentIndex),
-    revealCorrectIndex: state.phase === 'reveal' || state.phase === 'podium' ? (q?.correctIndex ?? null) : null,
+    revealCorrectIndex: answerRevealed ? (q?.correctIndex ?? null) : null,
     timeLimitMs: state.config.secondsPerQuestion * 1000,
     deadlineAt: state.phaseEndsAt,
+    paused: state.pausedAt !== null,
+    autoPlay: state.autoPlay,
     answeredCount,
     eligibleCount: eligible.length,
     distribution: answerDistribution(state),
+    voters: answerVoters(state),
     runners: buildRunners(state),
     leaderboard: getLeaderboard(state),
     podiumStats: state.phase === 'podium' ? computePodiumStats(state) : null,
@@ -130,7 +167,14 @@ export interface PlayerViewPayload {
   hasAnswered: boolean;
   lockedChoiceIndex: number | null;
   /** This player's own result for the question just revealed — never present before 'reveal'. */
-  result: { correct: boolean; points: number; correctIndex: number } | null;
+  result: {
+    correct: boolean;
+    points: number;
+    correctIndex: number;
+    /** Kahoot-style "คนส่วนใหญ่ตอบ … (60%)" — the choice picked by the most players, and its share. */
+    majorityChoiceIndex: number | null;
+    majorityPercent: number;
+  } | null;
   rank: number | null;
   totalPlayers: number;
   score: number;
@@ -159,10 +203,27 @@ export function buildPlayerView(state: DungeonDashState, playerId: string): Play
   const currentAnswer = player?.answers[state.currentIndex] ?? null;
   const q = state.questions[state.currentIndex];
 
-  const revealResult =
-    state.phase === 'reveal' && currentAnswer && q
-      ? { correct: currentAnswer.correct, points: currentAnswer.points, correctIndex: q.correctIndex }
-      : null;
+  const revealResult = (() => {
+    if (state.phase !== 'reveal' || !currentAnswer || !q) return null;
+    const counts = answerCounts(state, q.choices.length);
+    const total = counts.reduce((a, b) => a + b, 0);
+    let majorityChoiceIndex: number | null = null;
+    let max = -1;
+    counts.forEach((c, i) => {
+      if (c > max) {
+        max = c;
+        majorityChoiceIndex = i;
+      }
+    });
+    const majorityPercent = total > 0 && majorityChoiceIndex !== null ? Math.round(((counts[majorityChoiceIndex] ?? 0) / total) * 100) : 0;
+    return {
+      correct: currentAnswer.correct,
+      points: currentAnswer.points,
+      correctIndex: q.correctIndex,
+      majorityChoiceIndex: total > 0 ? majorityChoiceIndex : null,
+      majorityPercent,
+    };
+  })();
 
   return {
     phase: state.phase,

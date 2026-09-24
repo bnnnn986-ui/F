@@ -4,11 +4,13 @@ import { PixelInput } from '../core/ui/PixelInput';
 import { PixelButton } from '../core/ui/PixelButton';
 import { isValidRoomCode, normalizeRoomCode } from '../core/net/roomCode';
 import { navigate } from '../app/router';
+import { OFFLINE_MESSAGE_TH, useOnlineStatus } from '../core/device/online';
 
 /** Always-visible "join with code" box pinned near the top of the hub. */
 export function JoinPanel() {
   const [code, setCode] = useState('');
   const [touched, setTouched] = useState(false);
+  const online = useOnlineStatus();
 
   const normalized = normalizeRoomCode(code);
   const valid = isValidRoomCode(normalized);
@@ -16,7 +18,7 @@ export function JoinPanel() {
   const submit = (e: Event) => {
     e.preventDefault();
     setTouched(true);
-    if (!valid) return;
+    if (!valid || !online) return;
     navigate(`/join/${normalized}`);
   };
 
@@ -34,14 +36,16 @@ export function JoinPanel() {
             placeholder="เช่น A3XQP"
             maxLength={8}
             autoComplete="off"
+            autocapitalize="characters"
             inputMode="text"
             aria-invalid={touched && !valid}
           />
-          <PixelButton type="submit" variant="primary" disabled={!valid}>
+          <PixelButton type="submit" variant="primary" disabled={!valid || !online}>
             เข้าร่วม
           </PixelButton>
         </div>
         {touched && !valid && <p className="join-panel__hint">กรอกรหัสห้อง 5 ตัวอักษรให้ครบ</p>}
+        {touched && valid && !online && <p className="join-panel__hint">{OFFLINE_MESSAGE_TH}</p>}
       </form>
     </PixelPanel>
   );

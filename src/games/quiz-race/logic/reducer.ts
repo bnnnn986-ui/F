@@ -1,6 +1,9 @@
 import { correctAnswerPoints } from './scoring';
 import {
   COUNTDOWN_MS,
+  LEADERBOARD_AUTO_MS,
+  READ_MS,
+  REVEAL_AUTO_MS,
   type DungeonDashAction,
   type DungeonDashState,
   type DungeonPlayerState,
@@ -57,6 +60,8 @@ export function createInitialState(
   config: QuizConfig,
   questions: Question[],
   players: Array<{ playerId: string; name: string; avatarId: string; tint: number; isBot?: boolean }>,
+  autoPlay = false,
+  phaseDurations?: { readMs?: number; revealAutoMs?: number; leaderboardAutoMs?: number },
 ): DungeonDashState {
   const playerMap: Record<string, DungeonPlayerState> = {};
   for (const p of players) playerMap[p.playerId] = makePlayer(p.playerId, p.name, p.avatarId, p.tint, p.isBot ?? false, 0);
@@ -65,8 +70,13 @@ export function createInitialState(
     config,
     questions,
     currentIndex: 0,
+    autoPlay,
+    readMs: phaseDurations?.readMs ?? READ_MS,
+    revealAutoMs: phaseDurations?.revealAutoMs ?? REVEAL_AUTO_MS,
+    leaderboardAutoMs: phaseDurations?.leaderboardAutoMs ?? LEADERBOARD_AUTO_MS,
     questionStartedAt: null,
     phaseEndsAt: null,
+    pausedAt: null,
     players: playerMap,
   };
 }
@@ -83,6 +93,10 @@ function allEligibleAnswered(state: DungeonDashState): boolean {
   return eligible.every((p) => state.currentIndex in p.answers);
 }
 
+function toRead(state: DungeonDashState, now: number): DungeonDashState {
+  return { ...state, phase: 'read', questionStartedAt: null, phaseEndsAt: now + READ_MS };
+}
+
 function beginQuestion(state: DungeonDashState, now: number): DungeonDashState {
   const timeLimitMs = state.config.secondsPerQuestion * 1000;
   return {
@@ -93,8 +107,21 @@ function beginQuestion(state: DungeonDashState, now: number): DungeonDashState {
   };
 }
 
-function toReveal(state: DungeonDashState): DungeonDashState {
-  return { ...state, phase: 'reveal', phaseEndsAt: null };
+/** Auto-play gets a timed deadline (so `tick` can advance it); manual mode waits for the host's "next". */
+function toReveal(state: DungeonDashState, now: number): DungeonDashState {
+  return { ...state, phase: 'reveal', phaseEndsAt: state.autoPlay ? now + REVEAL_AUTO_MS : null };
+}
+
+function toLeaderboard(state: DungeonDashState, now: number): DungeonDashState {
+  return { ...state, phase: 'leaderboard', phaseEndsAt: state.autoPlay ? now + LEADERBOARD_AUTO_MS : null };
+}
+
+function toNextQuestionOrPodium(state: DungeonDashState, now: number): DungeonDashState {
+  const nextIndex = state.currentIndex + 1;
+  if (nextIndex >= state.questions.length) {
+    return { ...state, phase: 'podium', phaseEndsAt: null };
+  }
+  return toRead({ ...state, currentIndex: nextIndex }, now);
 }
 
 export function dungeonDashReducer(state: DungeonDashState, action: DungeonDashAction): DungeonDashState {
@@ -106,16 +133,28 @@ export function dungeonDashReducer(state: DungeonDashState, action: DungeonDashA
     }
 
     case 'tick': {
-      if (state.phase === 'countdown' && state.phaseEndsAt !== null && action.now >= state.phaseEndsAt) {
-        return beginQuestion(state, action.now);
+      if (state.pausedAt !== null) return state; // frozen: absolute timestamps only move again on 'resume'
+      const now = action.now;
+      if (state.phase === 'countdown' && state.phaseEndsAt !== null && now >= state.phaseEndsAt) {
+        return toRead(state, now);
       }
-      if (state.phase === 'question' && state.phaseEndsAt !== null && action.now >= state.phaseEndsAt) {
-        return toReveal(state);
+      if (state.phase === 'read' && state.phaseEndsAt !== null && now >= state.phaseEndsAt) {
+        return beginQuestion(state, now);
+      }
+      if (state.phase === 'question' && state.phaseEndsAt !== null && now >= state.phaseEndsAt) {
+        return toReveal(state, now);
+      }
+      if (state.phase === 'reveal' && state.autoPlay && state.phaseEndsAt !== null && now >= state.phaseEndsAt) {
+        return toLeaderboard(state, now);
+      }
+      if (state.phase === 'leaderboard' && state.autoPlay && state.phaseEndsAt !== null && now >= state.phaseEndsAt) {
+        return toNextQuestionOrPodium(state, now);
       }
       return state;
     }
 
     case 'answer': {
+      if (state.pausedAt !== null) return state; // paused: no answering while frozen
       if (state.phase !== 'question' || state.phaseEndsAt === null || state.questionStartedAt === null) return state;
       if (action.now > state.phaseEndsAt) return state; // late answer, rejected
       const player = state.players[action.playerId];
@@ -146,21 +185,59 @@ export function dungeonDashReducer(state: DungeonDashState, action: DungeonDashA
         players: { ...state.players, [action.playerId]: updatedPlayer },
       };
 
-      if (allEligibleAnswered(nextState)) nextState = toReveal(nextState);
+      if (allEligibleAnswered(nextState)) nextState = toReveal(nextState, action.now);
       return nextState;
     }
 
     case 'next': {
-      if (state.phase !== 'reveal') return state;
-      const nextIndex = state.currentIndex + 1;
-      if (nextIndex >= state.questions.length) {
-        return { ...state, phase: 'podium', phaseEndsAt: null };
-      }
-      return beginQuestion({ ...state, currentIndex: nextIndex }, action.now);
+      if (state.phase === 'reveal') return toLeaderboard(state, action.now);
+      if (state.phase === 'leaderboard') return toNextQuestionOrPodium(state, action.now);
+      return state;
     }
 
     case 'end': {
-      return { ...state, phase: 'podium', phaseEndsAt: null };
+      return { ...state, phase: 'podium', phaseEndsAt: null, pausedAt: null };
+    }
+
+    case 'skip': {
+      // Force the current timed phase to end immediately, exactly like its timer hitting 0.
+      const now = action.now;
+      const s: DungeonDashState = state.pausedAt !== null ? { ...state, pausedAt: null } : state;
+      switch (s.phase) {
+        case 'countdown':
+          return toRead(s, now);
+        case 'read':
+          return beginQuestion(s, now);
+        case 'question':
+          return toReveal(s, now);
+        case 'reveal':
+          return toLeaderboard(s, now);
+        case 'leaderboard':
+          return toNextQuestionOrPodium(s, now);
+        default:
+          return s;
+      }
+    }
+
+    case 'pause': {
+      if (state.pausedAt !== null) return state; // already paused
+      if (state.phaseEndsAt === null) return state; // nothing timed running right now
+      return { ...state, pausedAt: action.now };
+    }
+
+    case 'resume': {
+      if (state.pausedAt === null) return state;
+      const delta = action.now - state.pausedAt;
+      return {
+        ...state,
+        pausedAt: null,
+        phaseEndsAt: state.phaseEndsAt !== null ? state.phaseEndsAt + delta : null,
+        questionStartedAt: state.questionStartedAt !== null ? state.questionStartedAt + delta : null,
+      };
+    }
+
+    case 'setAutoPlay': {
+      return { ...state, autoPlay: action.autoPlay };
     }
 
     case 'playerJoin': {
@@ -181,7 +258,7 @@ export function dungeonDashReducer(state: DungeonDashState, action: DungeonDashA
         ...state,
         players: { ...state.players, [action.playerId]: { ...existing, connected: false } },
       };
-      if (state.phase === 'question' && allEligibleAnswered(nextState)) nextState = toReveal(nextState);
+      if (state.phase === 'question' && allEligibleAnswered(nextState)) nextState = toReveal(nextState, action.now);
       return nextState;
     }
 
