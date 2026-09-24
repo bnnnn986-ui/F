@@ -12,9 +12,11 @@ import { navigate } from '../app/router';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
 import { Icon } from '../core/ui/Icon';
 import { InstallButton } from '../core/pwa/InstallButton';
+import { OFFLINE_MESSAGE_TH, useOnlineStatus } from '../core/device/online';
 
 export function HubPage() {
   const [activeGame, setActiveGame] = useState<GameManifest | null>(null);
+  const online = useOnlineStatus();
 
   return (
     <div className="hub-page">
@@ -47,9 +49,10 @@ export function HubPage() {
           <AvatarSprite avatarId="bard" size={56} />
         </div>
         <div className="hub-hero__cta">
-          <PixelButton variant="primary" big onClick={() => navigate('/party/host')}>
+          <PixelButton variant="primary" big disabled={!online} onClick={() => online && navigate('/party/host')}>
             <Icon name="mug" className="pp-icon--md" /> สร้างโรงเตี๊ยม (เป็นผู้คุมเกม)
           </PixelButton>
+          {!online && <p className="join-panel__hint">{OFFLINE_MESSAGE_TH}</p>}
         </div>
       </header>
 

@@ -69,6 +69,8 @@ export class RoomHost extends Emitter<RoomHostEvents> {
   private teamMode = false;
   private teams: Team[] = [];
   private partyTeamScores = new Map<string, number>(); // teamId -> cumulative points
+  /** "โฮสต์ร่วมเล่นด้วย" — the host's own playerId when they've joined the current game as a player. */
+  private localPlayerId: string | null = null;
 
   constructor(opts: RoomHostOptions) {
     super();
@@ -285,6 +287,62 @@ export class RoomHost extends Emitter<RoomHostEvents> {
     this.players.delete(playerId);
     this.game?.onPlayerLeave?.(playerId);
     this.broadcastLobby();
+  }
+
+  // ---- "โฮสต์ร่วมเล่นด้วย" — the host joins their own room as a real player ----
+
+  getLocalPlayerId(): string | null {
+    return this.localPlayerId;
+  }
+
+  /** Adds the host as a real player (no transport, driven by direct calls, not bot logic). */
+  addLocalPlayer(name: string, avatarId: string, tint: number): RoomPlayer {
+    if (this.localPlayerId) this.removeLocalPlayer();
+    const playerId = `host-${Math.random().toString(36).slice(2, 10)}`;
+    const player: RoomPlayer = {
+      playerId,
+      peerId: playerId,
+      name: this.dedupeName(name.trim() || 'ผู้คุมเกม'),
+      avatarId,
+      tint,
+      connected: true,
+      isHost: true,
+      isBot: false,
+      score: 0,
+      joinedAt: Date.now(),
+      teamId: this.autoAssignTeamForNewPlayer(),
+    };
+    this.players.set(playerId, player);
+    this.localPlayerId = playerId;
+    this.game?.onPlayerJoin?.(playerId);
+    this.broadcastLobby();
+    return player;
+  }
+
+  removeLocalPlayer(): void {
+    if (!this.localPlayerId) return;
+    const playerId = this.localPlayerId;
+    this.localPlayerId = null;
+    this.players.delete(playerId);
+    this.game?.onPlayerLeave?.(playerId);
+    this.broadcastLobby();
+  }
+
+  /** Sends a game intent (answer, etc.) on behalf of the host's own embedded player. */
+  sendLocalIntent(intent: unknown): void {
+    if (!this.localPlayerId || !this.game) return;
+    this.game.onIntent(this.localPlayerId, intent);
+    this.broadcastGameState();
+  }
+
+  /**
+   * The host's own player-facing view — built by the SAME per-player
+   * projection every remote phone gets, so it structurally can never reveal
+   * the correct answer before reveal (see `GameHost.getPlayerView`).
+   */
+  getLocalPlayerView(): unknown {
+    if (!this.localPlayerId || !this.game) return null;
+    return this.game.getPlayerView(this.localPlayerId);
   }
 
   /** Loads a game module, mounts its host logic, and switches the room into `in-game`. */

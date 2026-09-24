@@ -19,6 +19,12 @@ import { loadSnapshotFromStorage, isSnapshotFresh, type HostSnapshot } from '../
 import { Icon } from '../core/ui/Icon';
 import { Chevron } from '../core/ui/PixelShape';
 import { HostControlBar } from './HostControlBar';
+import { useWakeLock } from '../core/device/wakeLock';
+import { setHostGameBusy } from '../core/pwa/updateGate';
+import { loadHostPlaysChoice, saveHostPlaysChoice, effectiveHostPlays } from '../core/storage/hostPlays';
+import { loadProfile, saveProfile } from '../core/storage/profile';
+import { PlayerForm } from '../lobby/PlayerForm';
+import { Modal } from '../core/ui/Modal';
 
 type OpenState = 'checking-snapshot' | 'opening' | 'restoring' | 'open' | 'error';
 
@@ -45,9 +51,35 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
   const [snapshot, setSnapshot] = useState<HostSnapshot | null>(null);
   const [ReportHistoryComp, setReportHistoryComp] = useState<ComponentType<{ onClose: () => void }> | null>(null);
   const [showReportHistory, setShowReportHistory] = useState(false);
+  const [hostPlays, setHostPlaysState] = useState(() => effectiveHostPlays(loadHostPlaysChoice()));
+  const [hostPlaysFormOpen, setHostPlaysFormOpen] = useState(false);
+  const [localPlayerId, setLocalPlayerId] = useState<string | null>(null);
+  const [hostPlayerView, setHostPlayerView] = useState<unknown>(null);
 
   const hostRef = useRef<RoomHost | null>(null);
   const prevCountRef = useRef(0);
+
+  // Keep the screen awake through the whole party (lobby + any active game).
+  useWakeLock(openState === 'open');
+
+  function toggleHostPlays(on: boolean) {
+    saveHostPlaysChoice(on);
+    if (on) {
+      setHostPlaysFormOpen(true);
+    } else {
+      hostRef.current?.removeLocalPlayer();
+      setLocalPlayerId(null);
+      setHostPlaysState(false);
+    }
+  }
+
+  function confirmHostPlays(profile: { name: string; avatarId: string; tint: number }) {
+    saveProfile(profile);
+    const player = hostRef.current?.addLocalPlayer(profile.name, profile.avatarId, profile.tint);
+    setLocalPlayerId(player?.playerId ?? null);
+    setHostPlaysState(true);
+    setHostPlaysFormOpen(false);
+  }
 
   function wireHost(host: RoomHost) {
     host.on('lobbyChange', (list, isLocked) => {
@@ -62,15 +94,20 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
     });
     host.on('phaseChange', (newPhase, gameId) => {
       setPhase(newPhase);
+      setHostGameBusy(newPhase === 'in-game');
       if (newPhase === 'lobby') {
         setActiveModule(null);
         setGameView(null);
+        setHostPlayerView(null);
         setPartyScores(host.getPartyScores());
       } else if (gameId) {
         loadGameModule(gameId).then((m) => setActiveModule(m));
       }
     });
-    host.on('gameViewChange', (view) => setGameView(view));
+    host.on('gameViewChange', (view) => {
+      setGameView(view);
+      if (host.getLocalPlayerId()) setHostPlayerView(host.getLocalPlayerView());
+    });
   }
 
   async function openFreshRoom() {
@@ -127,6 +164,7 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
     return () => {
       hostRef.current?.close();
       hostRef.current = null;
+      setHostGameBusy(false);
     };
   }, []);
 
@@ -186,12 +224,16 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
 
   if (phase === 'in-game' && activeModule) {
     const HostView = activeModule.HostView;
-    // Generic control bar for whatever game is mounted: pause/resume state is read duck-typed off
-    // the game's own view payload (games that don't report one just hide the pause/resume button).
+    const PlayerViewComp = activeModule.PlayerView;
+    // Generic control bar for whatever game is mounted: pause/resume state and phase are read duck-typed
+    // off the game's own view payload (games that don't report them just hide the affected UI).
     const pausedFromView = gameView && typeof gameView === 'object' && 'paused' in gameView ? Boolean((gameView as { paused: unknown }).paused) : undefined;
+    const gamePhase = gameView && typeof gameView === 'object' && 'phase' in gameView ? String((gameView as { phase: unknown }).phase) : undefined;
+    const roomCodeVisible = gamePhase !== undefined && gamePhase !== 'setup';
     return (
-      <div className="screen-center">
+      <div className="screen-center game-host-screen">
         <HostControlBar
+          phase={gamePhase}
           paused={pausedFromView}
           onPause={() => hostRef.current?.sendHostAction({ type: 'pause' })}
           onResume={() => hostRef.current?.sendHostAction({ type: 'resume' })}
@@ -199,11 +241,24 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
           onGoToPodium={() => hostRef.current?.sendHostAction({ type: 'end' })}
           onQuitWithoutScores={() => hostRef.current?.endGame()}
         />
+        {roomCodeVisible && (
+          <div className="game-room-code-badge pixel-num" data-testid="game-room-code-badge">
+            {roomCode}
+          </div>
+        )}
         <HostView
           view={gameView}
           onHostAction={(action) => hostRef.current?.sendHostAction(action)}
           onBackToLobby={() => hostRef.current?.endGame()}
         />
+        {localPlayerId && hostPlayerView && (
+          <div className="host-embedded-player" data-testid="host-embedded-player">
+            <p className="host-embedded-player__label">
+              <Icon name="swords" className="pp-icon--sm" /> คุณก็เล่นด้วย
+            </p>
+            <PlayerViewComp view={hostPlayerView} sendIntent={(intent) => hostRef.current?.sendLocalIntent(intent)} />
+          </div>
+        )}
       </div>
     );
   }
@@ -224,6 +279,18 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
           showToast('เชิญนักผจญภัยออกจากโรงเตี๊ยมแล้ว');
         }}
       />
+
+      <PixelPanel className="host-lobby__play-toggle">
+        <label className="quiz-setup__toggle">
+          <input
+            type="checkbox"
+            checked={hostPlays}
+            onChange={(e) => toggleHostPlays((e.target as HTMLInputElement).checked)}
+          />
+          <Icon name="swords" className="pp-icon--sm" /> โฮสต์ร่วมเล่นด้วย
+        </label>
+        <p className="quiz-setup__hint">เมื่อเปิด คุณจะเป็นผู้เล่นคนหนึ่งด้วย — หน้าจอโฮสต์จะไม่เผยคำตอบที่ถูกก่อนเฉลยแน่นอน</p>
+      </PixelPanel>
 
       <div className="host-lobby__bots">
         <PixelButton
@@ -248,6 +315,12 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
 <Icon name="scroll" className="pp-icon--md" /> รายงานย้อนหลัง
         </PixelButton>
       </div>
+
+      {hostPlaysFormOpen && (
+        <Modal open onClose={() => setHostPlaysFormOpen(false)} title="ร่วมเล่นในนามใคร?">
+          <PlayerForm initial={loadProfile()} roomCode={roomCode} onSubmit={confirmHostPlays} />
+        </Modal>
+      )}
 
       {showReportHistory && ReportHistoryComp && <ReportHistoryComp onClose={() => setShowReportHistory(false)} />}
 

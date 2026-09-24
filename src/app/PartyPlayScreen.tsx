@@ -9,6 +9,7 @@ import { PixelButton } from '../core/ui/PixelButton';
 import { D20Spinner } from '../core/ui/D20Spinner';
 import { PlayerLobby } from '../lobby/PlayerLobby';
 import { PartyScoreboard } from '../lobby/PartyScoreboard';
+import { useWakeLock } from '../core/device/wakeLock';
 
 /**
  * `#/party/play` — the player's whole-session screen: the party lobby
@@ -24,6 +25,8 @@ export function PartyPlayScreen() {
   const state = usePartyClientState();
   const [activeModule, setActiveModule] = useState<GameModule | null>(null);
   const [resumeFailed, setResumeFailed] = useState<string | null>(null);
+
+  useWakeLock(state.status === 'connected');
 
   useEffect(() => {
     if (state.status !== 'idle') return;
@@ -117,6 +120,8 @@ export function PartyPlayScreen() {
         teamMode={state.teamMode}
         teams={state.teams}
         onChooseTeam={choosePartyTeam}
+        roomCode={state.roomCode}
+        joinUrl={`${window.location.origin}${window.location.pathname}#/join/${state.roomCode}`}
       />
     </>
   );

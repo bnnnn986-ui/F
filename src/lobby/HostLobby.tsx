@@ -5,6 +5,7 @@ import { QRDisplay } from '../core/ui/QRDisplay';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
 import { showToast } from '../core/ui/toast';
 import { Icon } from '../core/ui/Icon';
+import { shareJoinLink } from '../core/device/share';
 import type { RoomPlayer } from '../core/room/protocol';
 
 /** Party room info panel + player roster, shared by the lobby and in-game host screens. */
@@ -49,6 +50,9 @@ export function HostLobby({
             <div className="host-lobby__actions">
               <PixelButton variant="secondary" onClick={copyLink}>
                 {copied ? <><Icon name="check" className="pp-icon--sm" /> คัดลอกแล้ว</> : 'คัดลอกลิงก์เข้าร่วม'}
+              </PixelButton>
+              <PixelButton variant="secondary" onClick={() => shareJoinLink(joinUrl, roomCode)}>
+                <Icon name="horn" className="pp-icon--sm" /> แชร์
               </PixelButton>
               <PixelButton variant={locked ? 'danger' : 'secondary'} onClick={onToggleLock}>
                 <Icon name="lock" className="pp-icon--sm" /> {locked ? 'ปลดล็อกห้อง' : 'ล็อกห้อง'}

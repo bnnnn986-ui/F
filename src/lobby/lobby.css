@@ -125,8 +125,9 @@
 }
 
 .avatar-picker__item.is-selected {
-  border-color: var(--pp-accent);
+  border-color: var(--pp-gold-glow);
   background: rgba(255, 209, 102, 0.15);
+  box-shadow: 0 0 0 2px rgba(255, 217, 122, 0.35), 0 0 12px var(--pp-gold-glow);
 }
 
 .host-lobby {
@@ -291,6 +292,22 @@
   margin: 0;
 }
 
+.player-lobby__self-actions {
+  display: flex;
+  gap: var(--pp-space-2);
+  justify-content: center;
+  align-items: center;
+  margin-top: var(--pp-space-3);
+  flex-wrap: wrap;
+}
+
+.host-lobby__play-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pp-space-1);
+}
+.host-lobby__play-toggle .quiz-setup__toggle { font-weight: 700; }
+
 .player-lobby__list {
   list-style: none;
   margin: 0;
@@ -438,9 +455,4 @@
   border-radius: 4px;
 }
 
-.host-actions-row {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
+/* .host-actions-row now lives in core/ui/components.css (button size system). */

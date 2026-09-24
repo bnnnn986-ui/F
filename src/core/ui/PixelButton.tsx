@@ -4,15 +4,18 @@ import { playSound } from '../audio/audio';
 
 export interface PixelButtonProps extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> {
   variant?: 'primary' | 'secondary' | 'danger' | 'accent';
+  /** Exact heights: sm 36 / md 48 (default) / lg 64px. `big` is a legacy alias for `size="lg"`. */
+  size?: 'sm' | 'md' | 'lg';
   big?: boolean;
   block?: boolean;
   children: ComponentChildren;
   silent?: boolean;
 }
 
-/** Chunky pixel-styled button with a press animation and a click sound. */
+/** Chunky pixel-styled button with a press animation and a click sound. Sizes: sm 36 / md 48 / lg 64px. */
 export function PixelButton({
   variant = 'secondary',
+  size,
   big,
   block,
   className = '',
@@ -30,10 +33,11 @@ export function PixelButton({
     onClick?.(e);
   };
 
+  const resolvedSize = size ?? (big ? 'lg' : 'md');
   const classes = [
     'pixel-btn',
     `pixel-btn--${variant}`,
-    big ? 'pixel-btn--big' : '',
+    `pixel-btn--${resolvedSize}`,
     block ? 'pixel-btn--block' : '',
     pressed ? 'is-pressed' : '',
     className,

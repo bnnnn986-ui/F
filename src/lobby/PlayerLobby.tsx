@@ -1,9 +1,12 @@
 import { PixelPanel } from '../core/ui/PixelPanel';
+import { PixelButton } from '../core/ui/PixelButton';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
-import { EmblemIcon } from '../core/ui/Icon';
+import { EmblemIcon, Icon } from '../core/ui/Icon';
 import type { EmblemName } from '../core/sprites/icons';
 import type { RoomPlayer, Team } from '../core/room/protocol';
 import { getTeam } from '../core/room/teams';
+import { shareJoinLink } from '../core/device/share';
+import { InstallButton } from '../core/pwa/InstallButton';
 
 export function PlayerLobby({
   self,
@@ -11,12 +14,17 @@ export function PlayerLobby({
   teamMode = false,
   teams = [],
   onChooseTeam,
+  joinUrl,
+  roomCode,
 }: {
   self: RoomPlayer | undefined;
   players: RoomPlayer[];
   teamMode?: boolean;
   teams?: Team[];
   onChooseTeam?: (teamId: string) => void;
+  /** Present on the party lobby screen — lets a player invite others too, not just the host. */
+  joinUrl?: string;
+  roomCode?: string;
 }) {
   const others = players.filter((p) => p.playerId !== self?.playerId);
   const myTeam = teamMode ? getTeam(teams, self?.teamId) : undefined;
@@ -32,6 +40,14 @@ export function PlayerLobby({
           </p>
         )}
         <p className="player-lobby__waiting">รอผู้คุมเกมเริ่มภารกิจ…</p>
+        {joinUrl && (
+          <div className="player-lobby__self-actions">
+            <PixelButton variant="secondary" size="sm" onClick={() => shareJoinLink(joinUrl, roomCode)}>
+              <Icon name="horn" className="pp-icon--sm" /> ชวนเพื่อน
+            </PixelButton>
+            <InstallButton compact />
+          </div>
+        )}
       </PixelPanel>
 
       {teamMode && teams.length > 0 && onChooseTeam && (

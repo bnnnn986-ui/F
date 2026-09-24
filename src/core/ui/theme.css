@@ -28,6 +28,31 @@
 
   --pp-radius: 4px;
   --pp-border: 4px;
+
+  /* Spacing scale (4/8/12/16/24/32) — use these instead of ad-hoc rem values. */
+  --pp-space-1: 4px;
+  --pp-space-2: 8px;
+  --pp-space-3: 12px;
+  --pp-space-4: 16px;
+  --pp-space-6: 24px;
+  --pp-space-8: 32px;
+
+  /* Type scale */
+  --pp-text-xs: 0.75rem;
+  --pp-text-sm: 0.875rem;
+  --pp-text-base: 1rem;
+  --pp-text-lg: 1.25rem;
+  --pp-text-xl: 1.6rem;
+  --pp-text-2xl: 2.2rem;
+  --pp-text-3xl: 3rem;
+
+  /* Button system: exact heights + icon sizes, applied by .pixel-btn / .pp-icon */
+  --pp-btn-h-sm: 36px;
+  --pp-btn-h-md: 48px;
+  --pp-btn-h-lg: 64px;
+  --pp-icon-sm: 16px;
+  --pp-icon-md: 20px;
+  --pp-icon-lg: 24px;
   /* Pixel font renders Thai and "(" ")" glyphs badly (parens look like
      braces), so it is ONLY used via .pixel-title / .pixel-num — everything
      else, including every heading, defaults to Kanit. */

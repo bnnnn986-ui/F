@@ -3,6 +3,7 @@ import { PixelPanel } from '../../../core/ui/PixelPanel';
 import { AvatarSprite } from '../../../core/ui/AvatarSprite';
 import { TimerBar } from '../../../core/ui/Timer';
 import { playSound } from '../../../core/audio/audio';
+import { haptic } from '../../../core/device/haptics';
 import { Icon } from '../../../core/ui/Icon';
 import { PixelShape, type ShapeKind } from '../../../core/ui/PixelShape';
 import type { QuizPlayerIntent, QuizPlayerViewPayload } from '../index';
@@ -93,6 +94,7 @@ function QuestionPlayer({ v, onAnswer }: { v: QuizPlayerViewPayload; onAnswer: (
   const lockIn = (choiceIndex: number) => {
     if (v.hasAnswered) return;
     playSound('click');
+    haptic('lock');
     onAnswer(choiceIndex);
   };
 
@@ -136,6 +138,7 @@ function ResultPlayer({ v }: { v: QuizPlayerViewPayload }) {
     if (played.current) return;
     played.current = true;
     playSound(v.result?.correct ? 'correct' : 'wrong');
+    haptic(v.result?.correct ? 'correct' : 'wrong');
   }, [v.result?.correct]);
 
   return (

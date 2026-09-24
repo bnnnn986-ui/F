@@ -11,6 +11,7 @@ import { saveReport } from './content/reportHistory';
 import { BUILT_IN_PACKS, getBuiltInPack } from './content';
 import { loadCustomPacks } from './content/customPacks';
 import { DEFAULT_SETUP, saveQuizSetup, type QuizSetup } from './setupConfig';
+import { effectiveHostPlays, loadHostPlaysChoice } from '../../core/storage/hostPlays';
 import type { DungeonDashState, QuizConfig } from './logic/types';
 
 export type QuizHostAction =
@@ -28,12 +29,13 @@ export type QuizHostAction =
 
 /**
  * Default rule for "เดินเกมอัตโนมัติ" when the host hasn't made an explicit
- * choice yet: OFF on a wide/projector viewport (host is presenting), ON on
- * a narrow one (host is likely playing along on their own device too). An
+ * choice yet: ON iff "โฮสต์ร่วมเล่นด้วย" is on (the host is playing along on
+ * their own device, so the round should keep moving without a "ถัดไป" tap
+ * every time), OFF otherwise (host is presenting/driving manually). An
  * explicit `setup.autoPlay` always wins over this default.
  */
 export function defaultAutoPlay(): boolean {
-  return typeof window !== 'undefined' && window.innerWidth < 900;
+  return effectiveHostPlays(loadHostPlaysChoice());
 }
 
 function effectiveAutoPlay(setup: QuizSetup): boolean {
