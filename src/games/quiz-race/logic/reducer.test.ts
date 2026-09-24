@@ -319,7 +319,7 @@ describe('dungeonDashReducer: host control bar — pause/resume/skip', () => {
   });
 
   it('skip forces the current timed phase to end immediately, same as its timer hitting 0', () => {
-    let s = started(0);
+    const s = started(0);
     const skipped = dungeonDashReducer(s, { type: 'skip', now: s.questionStartedAt! + 1234 }); // well before the real deadline
     expect(skipped.phase).toBe('reveal');
   });

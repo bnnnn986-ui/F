@@ -80,8 +80,15 @@ test('team mode: 4 players (2 bots) in 2 guilds play a 2-question round, see the
   await alicePage!.getByTestId('quiz-answer-0').click();
   await bobPage!.getByTestId('quiz-answer-1').click();
 
-  await expect(hostPage.getByRole('button', { name: /ข้อถัดไป|ดูผลสรุป/ })).toBeVisible({ timeout: 15_000 });
-  await hostPage.getByRole('button', { name: /ข้อถัดไป|ดูผลสรุป/ }).click();
+  // reveal (Kahoot bars) -> leaderboard -> question 2
+  await expect(hostPage.getByRole('button', { name: /ดูอันดับ/ })).toBeVisible({ timeout: 15_000 });
+  await hostPage.getByRole('button', { name: /ดูอันดับ/ }).click();
+  await expect(hostPage.getByRole('button', { name: /ข้อถัดไป/ })).toBeVisible({ timeout: 15_000 });
+  await hostPage.getByRole('button', { name: /ข้อถัดไป/ }).click();
+
+  // question 2 (last) -> reveal -> leaderboard -> podium
+  await expect(hostPage.getByRole('button', { name: /ดูอันดับ/ })).toBeVisible({ timeout: 15_000 });
+  await hostPage.getByRole('button', { name: /ดูอันดับ/ }).click();
   await expect(hostPage.getByRole('button', { name: /ดูผลสรุป/ })).toBeVisible({ timeout: 15_000 });
   await hostPage.getByRole('button', { name: /ดูผลสรุป/ }).click();
 
