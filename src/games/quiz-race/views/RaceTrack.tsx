@@ -9,6 +9,9 @@ export function RaceTrack({ runners }: { runners: RunnerView[] }) {
   const sorted = [...runners].sort((a, b) => b.progress - a.progress);
   const visible = sorted.slice(0, MAX_LANES);
   const rest = sorted.length - visible.length;
+  // Native PixelLab art is 64x64 — an integer scale (1x/2x) keeps it crisp; bigger on projector-width screens.
+  const runnerSize = typeof window !== 'undefined' && window.innerWidth >= 1280 ? 64 : 36;
+  const chestSize = runnerSize >= 64 ? 48 : 30;
 
   return (
     <div className="race-track">
@@ -22,10 +25,10 @@ export function RaceTrack({ runners }: { runners: RunnerView[] }) {
           <span className="race-track__name">{r.name}</span>
           <div className="race-track__rail">
             <div className="race-track__runner" style={{ left: `${r.progress * 92}%` }}>
-              <AvatarSprite avatarId={r.avatarId} tint={r.tint} size={36} animation={r.progress > 0 ? 'run' : 'idle'} />
+              <AvatarSprite avatarId={r.avatarId} tint={r.tint} size={runnerSize} animation={r.progress > 0 ? 'run' : 'idle'} />
             </div>
             <div className="race-track__chest">
-              <ItemSprite id="treasure-chest" size={30} />
+              <ItemSprite id="treasure-chest" size={chestSize} />
             </div>
           </div>
         </div>

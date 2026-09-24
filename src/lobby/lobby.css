@@ -156,6 +156,30 @@
   gap: 1rem;
 }
 
+/* Wide/projector viewports: join header + roster on the left, game picker + settings on the right,
+   instead of one long narrow column with lots of unused side space. */
+@media (min-width: 1280px) {
+  .host-lobby-layout {
+    max-width: 1600px;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: start;
+    gap: var(--pp-space-6);
+  }
+  .host-lobby-layout__left,
+  .host-lobby-layout__right {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pp-space-4);
+  }
+}
+.host-lobby-layout__left,
+.host-lobby-layout__right {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 /* ---------- Kahoot-style host lobby header ---------- */
 .host-lobby__code-panel {
   text-align: center;

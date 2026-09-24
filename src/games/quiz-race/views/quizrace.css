@@ -36,6 +36,11 @@
 .quiz-question-host__card { }
 .quiz-question-host__meta { display: flex; justify-content: space-between; font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.4rem; }
 .quiz-question-host__text { text-align: center; margin: 0.75rem 0 1rem; }
+/* Projector-first: on wide/large screens the question card and race track use the whole width. */
+@media (min-width: 1280px) {
+  .quiz-question-host { max-width: none; padding: 0 var(--pp-space-6); }
+  .quiz-question-host__text { font-size: var(--pp-text-2xl); }
+}
 
 .quiz-plaques { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; }
 .quiz-plaque {
@@ -65,8 +70,11 @@
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 0.75rem;
   align-items: end;
-  height: 220px;
+  height: clamp(220px, 32vh, 420px);
   margin: 1rem 0 1.25rem;
+}
+@media (min-width: 1280px) {
+  .quiz-reveal-bars { height: clamp(320px, 40vh, 560px); gap: var(--pp-space-6); }
 }
 .quiz-reveal-bar {
   display: flex;
@@ -98,7 +106,7 @@
 }
 .quiz-reveal-bar__fill {
   width: 100%;
-  min-height: 4px;
+  min-height: 8px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -160,11 +168,24 @@
     flex: 1;
     min-height: 40vh;
   }
-  .quiz-plaques--player .quiz-plaque--button { height: 100%; flex-direction: column; text-align: center; justify-content: center; }
+  .quiz-plaques--player .quiz-plaque--button {
+    height: 100%;
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
+    gap: 0.6rem;
+  }
+  /* Without this the text span's own `flex: 1` (base rule) would grow to fill the whole tile
+     height and keep its text top-anchored inside that box — the icon+label group needs to stay
+     a compact block so `justify-content: center` on the tile can actually centre it. */
+  .quiz-plaques--player .quiz-plaque--button .quiz-plaque__shape { font-size: 1.6rem; }
+  .quiz-plaques--player .quiz-plaque--button .quiz-plaque__text { flex: none; font-size: 1.05rem; }
 }
 @media (orientation: landscape) and (max-height: 480px) {
   /* Phone landscape: 4-in-a-row. */
   .quiz-plaques--player { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .quiz-plaques--player .quiz-plaque--button { flex-direction: column; justify-content: center; text-align: center; gap: 0.4rem; }
+  .quiz-plaques--player .quiz-plaque--button .quiz-plaque__text { flex: none; }
 }
 .quiz-player-question__text { text-align: center; margin: 0.5rem 0; }
 .quiz-player-question__locked { text-align: center; opacity: 0.85; }
@@ -191,6 +212,11 @@
 .race-track__name { font-size: 0.7rem; color: var(--pp-paper); text-shadow: 1px 1px 0 #000; }
 .race-track__rail { position: relative; height: 40px; background: rgba(0,0,0,0.25); border-radius: 4px; }
 .race-track__runner { position: absolute; top: -6px; transition: left 400ms ease; }
+@media (min-width: 1280px) {
+  .race-track__rail { height: 64px; }
+  .race-track__lane { margin-bottom: 0.6rem; }
+  .race-track__name { font-size: 0.85rem; }
+}
 .race-track__runner--team { display: flex; gap: -8px; }
 .race-track__runner--team > * { margin-left: -10px; }
 .race-track__runner--team > *:first-child { margin-left: 0; }

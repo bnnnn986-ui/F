@@ -36,6 +36,7 @@ export function HostLobby({
 }) {
   const [copied, setCopied] = useState(false);
   const [qrEnlarged, setQrEnlarged] = useState(false);
+  const qrSize = typeof window !== 'undefined' && window.innerWidth >= 1280 ? 280 : 150;
 
   const copyLink = async () => {
     try {
@@ -67,12 +68,12 @@ export function HostLobby({
             onClick={() => setQrEnlarged(true)}
             aria-label="ขยาย QR โค้ดเต็มจอ"
           >
-            <QRDisplay url={joinUrl} size={150} />
+            <QRDisplay url={joinUrl} size={qrSize} />
           </button>
         </div>
         <div className="host-actions-row">
           <PixelButton variant="secondary" onClick={copyLink}>
-            {copied ? <><Icon name="check" className="pp-icon--sm" /> คัดลอกแล้ว</> : 'คัดลอกลิงก์เข้าร่วม'}
+            {copied ? <><Icon name="check" className="pp-icon--sm" /> คัดลอกแล้ว</> : 'คัดลอกลิงก์'}
           </PixelButton>
           <PixelButton variant="secondary" onClick={() => shareJoinLink(joinUrl, roomCode)}>
             <Icon name="horn" className="pp-icon--sm" /> แชร์

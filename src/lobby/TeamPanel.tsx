@@ -1,5 +1,6 @@
 import { PixelPanel } from '../core/ui/PixelPanel';
 import { PixelButton } from '../core/ui/PixelButton';
+import { Toggle } from '../core/ui/Toggle';
 import { AvatarSprite } from '../core/ui/AvatarSprite';
 import { EmblemIcon } from '../core/ui/Icon';
 import type { EmblemName } from '../core/sprites/icons';
@@ -32,10 +33,9 @@ export function TeamPanel({
     <PixelPanel className="team-panel">
       <div className="team-panel__header">
         <h2>โหมดกิลด์ (Team mode)</h2>
-        <label className="quiz-setup__toggle">
-          <input type="checkbox" checked={teamMode} onChange={(e) => onSetTeamMode((e.target as HTMLInputElement).checked)} />
+        <Toggle checked={teamMode} onChange={onSetTeamMode}>
           เปิดโหมดทีม
-        </label>
+        </Toggle>
       </div>
 
       {teamMode && (

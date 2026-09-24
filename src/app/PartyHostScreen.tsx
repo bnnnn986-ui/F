@@ -25,6 +25,7 @@ import { loadHostPlaysChoice, saveHostPlaysChoice, effectiveHostPlays } from '..
 import { loadProfile, saveProfile } from '../core/storage/profile';
 import { PlayerForm } from '../lobby/PlayerForm';
 import { Modal } from '../core/ui/Modal';
+import { Toggle } from '../core/ui/Toggle';
 
 type OpenState = 'checking-snapshot' | 'opening' | 'restoring' | 'open' | 'error';
 
@@ -252,8 +253,9 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
           onQuitWithoutScores={() => hostRef.current?.endGame()}
         />
         {roomCodeVisible && (
-          <div className="game-room-code-badge pixel-num" data-testid="game-room-code-badge">
-            {roomCode}
+          <div className="game-room-code-badge" data-testid="game-room-code-badge">
+            <span className="game-room-code-badge__label">รหัสห้อง</span>
+            <span className="game-room-code-badge__code pixel-num">{roomCode}</span>
           </div>
         )}
         <HostView
@@ -277,76 +279,74 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
   const botCount = players.filter((p) => p.isBot).length;
 
   return (
-    <div className="host-lobby">
-      <HostLobby
-        roomCode={roomCode}
-        joinUrl={joinUrl}
-        players={players}
-        locked={locked}
-        onToggleLock={() => hostRef.current?.setLocked(!locked)}
-        onKick={(playerId) => {
-          hostRef.current?.kickPlayer(playerId);
-          showToast('เชิญนักผจญภัยออกจากโรงเตี๊ยมแล้ว');
-        }}
-      />
-
-      <PixelPanel className="host-lobby__play-toggle">
-        <label className="quiz-setup__toggle">
-          <input
-            type="checkbox"
-            checked={hostPlays}
-            onChange={(e) => toggleHostPlays((e.target as HTMLInputElement).checked)}
-          />
-          <Icon name="swords" className="pp-icon--sm" /> โฮสต์ร่วมเล่นด้วย
-        </label>
-        <p className="quiz-setup__hint">เมื่อเปิด คุณจะเป็นผู้เล่นคนหนึ่งด้วย — หน้าจอโฮสต์จะไม่เผยคำตอบที่ถูกก่อนเฉลยแน่นอน</p>
-      </PixelPanel>
-
-      <div className="host-lobby__bots">
-        <PixelButton
-          variant="secondary"
-          disabled={botCount >= 10}
-          onClick={() => {
-            const bot = hostRef.current?.addBot();
-            if (bot) showToast(`เพิ่ม ${bot.name} (บอท) เข้าห้องแล้ว`);
+    <div className="host-lobby host-lobby-layout">
+      <div className="host-lobby-layout__left">
+        <HostLobby
+          roomCode={roomCode}
+          joinUrl={joinUrl}
+          players={players}
+          locked={locked}
+          onToggleLock={() => hostRef.current?.setLocked(!locked)}
+          onKick={(playerId) => {
+            hostRef.current?.kickPlayer(playerId);
+            showToast('เชิญนักผจญภัยออกจากโรงเตี๊ยมแล้ว');
           }}
-        >
-          เพิ่มนักผจญภัย NPC ({botCount}/10)
-        </PixelButton>
-        <PixelButton
-          variant="secondary"
-          onClick={() => {
-            setShowReportHistory(true);
-            if (!ReportHistoryComp) {
-              import('../games/quiz-race/views/ReportHistoryModal').then((m) => setReportHistoryComp(() => m.ReportHistoryModal));
-            }
-          }}
-        >
-<Icon name="scroll" className="pp-icon--md" /> รายงานย้อนหลัง
-        </PixelButton>
+        />
+
+        <PixelPanel className="host-lobby__play-toggle">
+          <Toggle checked={hostPlays} onChange={toggleHostPlays}>
+            <Icon name="swords" className="pp-icon--sm" /> โฮสต์ร่วมเล่นด้วย
+          </Toggle>
+          <p className="quiz-setup__hint">เมื่อเปิด คุณจะเป็นผู้เล่นคนหนึ่งด้วย — หน้าจอโฮสต์จะไม่เผยคำตอบที่ถูกก่อนเฉลยแน่นอน</p>
+        </PixelPanel>
       </div>
+
+      <div className="host-lobby-layout__right">
+        <div className="host-lobby__bots">
+          <PixelButton
+            variant="secondary"
+            disabled={botCount >= 10}
+            onClick={() => {
+              const bot = hostRef.current?.addBot();
+              if (bot) showToast(`เพิ่ม ${bot.name} (บอท) เข้าห้องแล้ว`);
+            }}
+          >
+            เพิ่มนักผจญภัย NPC ({botCount}/10)
+          </PixelButton>
+          <PixelButton
+            variant="secondary"
+            onClick={() => {
+              setShowReportHistory(true);
+              if (!ReportHistoryComp) {
+                import('../games/quiz-race/views/ReportHistoryModal').then((m) => setReportHistoryComp(() => m.ReportHistoryModal));
+              }
+            }}
+          >
+<Icon name="scroll" className="pp-icon--md" /> รายงานย้อนหลัง
+          </PixelButton>
+        </div>
+
+        {showReportHistory && ReportHistoryComp && <ReportHistoryComp onClose={() => setShowReportHistory(false)} />}
+
+        <PartyScoreboard scores={partyScores} teamScores={partyTeamScores} />
+
+        <TeamPanel
+          teamMode={teamMode}
+          teams={teams}
+          players={players}
+          onSetTeamMode={(on) => hostRef.current?.setTeamMode(on)}
+          onSetTeamCount={(n) => hostRef.current?.setTeamCount(n)}
+          onAutoBalance={() => hostRef.current?.autoBalanceTeams()}
+          onCyclePlayerTeam={(playerId, teamId) => hostRef.current?.movePlayerToTeam(playerId, teamId)}
+        />
+
+        <GamePicker selectedGameId={selectedGameId} onSelect={setSelectedGameId} />
 
       {hostPlaysFormOpen && (
         <Modal open onClose={() => setHostPlaysFormOpen(false)} title="ร่วมเล่นในนามใคร?">
           <PlayerForm initial={loadProfile()} roomCode={roomCode} onSubmit={confirmHostPlays} />
         </Modal>
       )}
-
-      {showReportHistory && ReportHistoryComp && <ReportHistoryComp onClose={() => setShowReportHistory(false)} />}
-
-      <PartyScoreboard scores={partyScores} teamScores={partyTeamScores} />
-
-      <TeamPanel
-        teamMode={teamMode}
-        teams={teams}
-        players={players}
-        onSetTeamMode={(on) => hostRef.current?.setTeamMode(on)}
-        onSetTeamCount={(n) => hostRef.current?.setTeamCount(n)}
-        onAutoBalance={() => hostRef.current?.autoBalanceTeams()}
-        onCyclePlayerTeam={(playerId, teamId) => hostRef.current?.movePlayerToTeam(playerId, teamId)}
-      />
-
-      <GamePicker selectedGameId={selectedGameId} onSelect={setSelectedGameId} />
 
       <div className="host-lobby__start">
         <PixelButton
@@ -365,6 +365,7 @@ export function PartyHostScreen({ preselectGameId }: { preselectGameId?: string 
           )}
         </PixelButton>
         {players.length < 1 && <p className="host-lobby__hint">รอนักผจญภัยเข้าร่วมอย่างน้อย 1 คนก่อนเริ่ม</p>}
+      </div>
       </div>
     </div>
   );
